@@ -57,7 +57,7 @@ class AuthController extends Controller
             'sale_add' => true,
             'auto_renew' => false,
             'sale_hide' => false,
-            'status' => 'active',
+            'status' => 'inactive',
         ]);
 
         // Assign role
@@ -65,7 +65,12 @@ class AuthController extends Controller
         $user->assignRole($role);
 
         $token = $user->createToken('auth_token')->plainTextToken;
-
+        if ($user->status !== 'active') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Registration successful. Your account is not active yet. Please wait for admin approval.',
+            ], 403);
+        }
         return response()->json([
             'success' => true,
             'message' => 'User registered successfully',
