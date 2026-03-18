@@ -3,6 +3,9 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserPermissionController;
 
 // Public routes
 Route::post('/register', [AuthController::class, 'register']);
@@ -16,6 +19,23 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/change-password', [AuthController::class, 'changePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
     
+
+    // User management routes
+    Route::apiResource('users', UserController::class);
+    
+    // Role management routes (super-admin only)
+    Route::prefix('roles')->group(function () {
+        Route::get('/', [RoleController::class, 'index']);
+        Route::get('/permissions', [RoleController::class, 'permissions']);
+        Route::put('/{role}/permissions', [RoleController::class, 'updatePermissions']);
+    });
+    
+    // User permission management routes
+    Route::prefix('users/{user}')->group(function () {
+        Route::get('/permissions', [UserPermissionController::class, 'getUserPermissions']);
+        Route::put('/permissions', [UserPermissionController::class, 'assignDirectPermissions']);
+    });
+
     // Affiliate settings (users can update their own)
     Route::put('/affiliate/settings', [AuthController::class, 'updateAffiliateSettings']);
     

@@ -112,14 +112,16 @@ class AuthController extends Controller
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
+    $user->load(['roles.permissions']);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'user' => $user->load('roles', 'permissions'),
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ]);
+         return response()->json([
+        'success' => true,
+        'message' => 'Login successful',
+        'user' => $user,
+        
+        'access_token' => $token,
+        'token_type' => 'Bearer',
+    ]);
     }
 
     /**
