@@ -3,7 +3,10 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\EventManageController;
+use App\Http\Controllers\GameManageController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\TeamManageController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
 
@@ -35,6 +38,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/permissions', [UserPermissionController::class, 'getUserPermissions']);
         Route::put('/permissions', [UserPermissionController::class, 'assignDirectPermissions']);
     });
+
+    // Team Management Routes using apiResource
+    Route::apiResource('teams', TeamManageController::class);
+    Route::patch('teams/{team}/toggle-status',[TeamManageController::class, 'toggleStatus']);
+        
+
+    Route::apiResource('games', GameManageController::class);
+    Route::patch('games/{game}/toggle-status', [GameManageController::class, 'toggleStatus']);
+    Route::post('games/update-order', [GameManageController::class, 'updateOrder']);
+
+    
+    Route::apiResource('events', EventManageController::class);
+
 
     // Affiliate settings (users can update their own)
     Route::put('/affiliate/settings', [AuthController::class, 'updateAffiliateSettings']);

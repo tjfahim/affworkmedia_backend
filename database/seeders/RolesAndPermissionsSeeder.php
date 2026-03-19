@@ -39,6 +39,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Dashboard
             'view dashboard',
             'view analytics',
+
         ];
 
         foreach ($permissions as $permission) {
