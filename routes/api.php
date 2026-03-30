@@ -3,9 +3,12 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DomainRedirectController;
 use App\Http\Controllers\EventManageController;
 use App\Http\Controllers\GameManageController;
+use App\Http\Controllers\LandingManageController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TeamManageController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
@@ -48,10 +51,29 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('games/{game}/toggle-status', [GameManageController::class, 'toggleStatus']);
     Route::post('games/update-order', [GameManageController::class, 'updateOrder']);
 
-    
+
     Route::apiResource('events', EventManageController::class);
 
 
+  Route::apiResource('landings', LandingManageController::class);
+    Route::patch('landings/{landing}/toggle-status', [LandingManageController::class, 'toggleStatus']);
+
+
+     Route::apiResource('domain-redirects', DomainRedirectController::class);
+    Route::patch('domain-redirects/{domainRedirect}/toggle-status', [DomainRedirectController::class, 'toggleStatus']);
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingController::class, 'index']);
+        Route::post('/', [SettingController::class, 'update']);
+        Route::put('/', [SettingController::class, 'update']);
+        Route::delete('/logo', [SettingController::class, 'removeLogo']);
+        Route::delete('/favicon', [SettingController::class, 'removeFavicon']);
+        
+    });
+
+
+
+    
+    
     // Affiliate settings (users can update their own)
     Route::put('/affiliate/settings', [AuthController::class, 'updateAffiliateSettings']);
     
