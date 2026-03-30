@@ -60,9 +60,9 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'balance' => 'decimal:2',
         'aff_percent' => 'decimal:2',
-        'sale_add' => 'boolean',
         'auto_renew' => 'boolean',
-        'sale_hide' => 'boolean',
+        'sale_add' => 'integer',
+        'sale_hide' => 'integer',
     ];
 
     // Accessors
@@ -76,4 +76,22 @@ class User extends Authenticatable
     {
         return $query->where('status', 'active');
     }
+
+    // Add relationship
+public function affiliatePayments()
+{
+    return $this->hasMany(AffiliatePayment::class, 'aff_user_id');
+}
+
+// Add method to update balance
+public function updateBalance($amount, $operation = 'add')
+{
+    if ($operation === 'add') {
+        $this->balance += $amount;
+    } elseif ($operation === 'subtract') {
+        $this->balance -= $amount;
+    }
+    
+    return $this->save();
+}
 }

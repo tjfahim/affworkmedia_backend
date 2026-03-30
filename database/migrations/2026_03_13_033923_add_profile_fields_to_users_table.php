@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up()
+     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
             // Personal Information
@@ -32,9 +32,9 @@ return new class extends Migration
             
             // Affiliate Settings
             $table->decimal('aff_percent', 5, 2)->default(0)->after('paypal');
-            $table->boolean('sale_add')->default(true)->after('aff_percent');
+            $table->integer('sale_add')->default(0)->after('aff_percent');
             $table->boolean('auto_renew')->default(false)->after('sale_add');
-            $table->boolean('sale_hide')->default(false)->after('auto_renew');
+            $table->integer('sale_hide')->default(0)->after('auto_renew');
             
             // Status
             $table->enum('status', ['active', 'inactive', 'suspended'])->default('active')->after('sale_hide');

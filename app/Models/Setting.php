@@ -36,7 +36,7 @@ class Setting extends Model
                 'landerpage_domain' => null,
                 'logo' => null,
                 'favicon' => null,
-                'default_master_password' => null
+                'default_master_password' => '123456789'
             ]);
         }
         
@@ -44,18 +44,20 @@ class Setting extends Model
     }
 
     // Update or create settings
-    public static function updateSettings(array $data)
+   public static function updateSettings(array $data)
     {
         $settings = self::first();
         
-        if ($settings) {
-            // Update existing settings
-            $settings->update($data);
-        } else {
-            // Create new settings
-            $settings = self::create($data);
+        if (!$settings) {
+            $settings = new self();
         }
         
-        return $settings->fresh(); // Return fresh instance with updated data
+        foreach ($data as $key => $value) {
+            $settings->$key = $value;
+        }
+        
+        $settings->save();
+        
+        return $settings;
     }
 }

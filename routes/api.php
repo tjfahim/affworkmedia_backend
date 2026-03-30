@@ -1,6 +1,8 @@
 <?php
 // routes/api.php
 
+use App\Http\Controllers\AffiliateController;
+use App\Http\Controllers\AffiliatePaymentController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DomainRedirectController;
@@ -36,6 +38,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{role}/permissions', [RoleController::class, 'updatePermissions']);
     });
     
+    Route::apiResource('affiliates', AffiliateController::class);
+    
+    // Additional helper routes
+    Route::prefix('affiliates')->group(function () {
+        Route::get('/all/list', [AffiliateController::class, 'getAllAffiliates']);
+        Route::patch('/{id}/status', [AffiliateController::class, 'updateStatus']);
+        Route::patch('/{id}/commission', [AffiliateController::class, 'updateCommission']);
+    });
     // User permission management routes
     Route::prefix('users/{user}')->group(function () {
         Route::get('/permissions', [UserPermissionController::class, 'getUserPermissions']);
@@ -69,6 +79,38 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/favicon', [SettingController::class, 'removeFavicon']);
         
     });
+
+    // Affiliate Payment Routes
+Route::prefix('affiliate-payments')->middleware(['auth:sanctum'])->group(function () {
+    // Get all payments with filters
+    Route::get('/', [AffiliatePaymentController::class, 'getAllPayments']);
+    
+    // Get affiliates with balance
+    Route::get('/affiliates-with-balance', [AffiliatePaymentController::class, 'getAffiliatesWithBalance']);
+    
+    // Get balance summary
+    Route::get('/balance-summary', [AffiliatePaymentController::class, 'getBalanceSummary']);
+    
+    // Create payment (handles both full and partial)
+    Route::post('/create-payment', [AffiliatePaymentController::class, 'createPayment']);
+    
+    // Get payments for specific affiliate
+    Route::get('/affiliate/{userId}', [AffiliatePaymentController::class, 'getAffiliatePayments']);
+    
+    // Get single payment
+    Route::get('/{id}', [AffiliatePaymentController::class, 'getPayment']);
+    
+    // Edit/Update payment
+    Route::put('/{id}', [AffiliatePaymentController::class, 'editPayment']);
+    
+    // Update payment status
+    Route::patch('/{id}/status', [AffiliatePaymentController::class, 'updatePaymentStatus']);
+    
+    // Delete payment
+    Route::delete('/{id}', [AffiliatePaymentController::class, 'deletePayment']);
+    Route::get('/{id}/invoice', [AffiliatePaymentController::class, 'generateInvoice']);
+
+});
 
 
 
