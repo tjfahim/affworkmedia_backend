@@ -177,12 +177,25 @@ class AffiliatePaymentController extends Controller
             
             // Calculate remaining balance
             $remainingBalance = $currentBalance - $paymentAmount;
-            
+              
+                $paymentEmail = match ($request->pay_method) {
+            'paypal' => $affiliate->paypal ?? null,
+            'payoneer' => $affiliate->payoneer ?? null,
+            'bank_transfer' => $affiliate->account_email ?? null,
+            default => $affiliate->email ?? null,
+        };
+        if (!$paymentEmail) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Selected payment method email not found'
+    ], 422);
+}
             // Create payment record
             $payment = AffiliatePayment::create([
                 'aff_user_id' => $request->aff_user_id,
                 'title' => $request->title ?? ($paymentAmount == $currentBalance ? 'Full Balance Withdrawal' : 'Partial Balance Withdrawal'),
-                'email' => $affiliate->email,
+              
+         'email' => $paymentEmail,
                 'price' => $paymentAmount,
                 'pay_method' => $request->pay_method,
                 'description' => $request->description ?? ($paymentAmount == $currentBalance 
@@ -355,8 +368,9 @@ class AffiliatePaymentController extends Controller
                 'status' => $affiliate->status,
                 'company' => $affiliate->company,
                 'pay_method' => $affiliate->pay_method,
-                'paypal_email' => $affiliate->paypal,
-                'payoneer_email' => $affiliate->payoneer,
+                'paypal' => $affiliate->paypal,
+                'payoneer' => $affiliate->payoneer,
+                'account_email' => $affiliate->account_email,
             ];
         });
         
@@ -645,6 +659,71 @@ class AffiliatePaymentController extends Controller
         return response()->json([
             'success' => false,
             'message' => 'Failed to generate invoice',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+
+public function getMyPayments(Request $request)
+{
+    try {
+        $user = auth()->user();
+
+     
+        $query = AffiliatePayment::where('aff_user_id', $user->id);
+
+        // Optional status filter
+        if ($request->has('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $payments = $query
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->get('per_page', 15));
+
+        return response()->json([
+            'success' => true,
+            'data' => $payments,
+            'message' => 'My payments retrieved successfully'
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to retrieve payments',
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+public function getMyPaymentView($id)
+{
+    try {
+        $user = auth()->user();
+
+        $payment = AffiliatePayment::where('id', $id)
+                    ->where('aff_user_id', $user->id)
+                    ->with('affiliate')
+                    ->first();
+
+        if (!$payment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Payment not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $payment,
+            'message' => 'Payment details retrieved successfully'
+        ], 200);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to retrieve payment',
             'error' => $e->getMessage()
         ], 500);
     }
