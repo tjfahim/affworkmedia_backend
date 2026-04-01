@@ -30,7 +30,7 @@ class UsersTableSeeder extends Seeder
             'aff_percent' => 0,
             'sale_add' => true,
             'auto_renew' => true,
-            'sale_hide' => false,
+            'sale_hide' => 3,
             'status' => 'active',
         ]);
         $superAdmin->assignRole('super-admin');
@@ -54,7 +54,7 @@ class UsersTableSeeder extends Seeder
             'aff_percent' => 0,
             'sale_add' => true,
             'auto_renew' => true,
-            'sale_hide' => false,
+            'sale_hide' => 3,
             'status' => 'active',
         ]);
         $admin->assignRole('admin');
@@ -78,7 +78,7 @@ class UsersTableSeeder extends Seeder
             'aff_percent' => 10,
             'sale_add' => true,
             'auto_renew' => false,
-            'sale_hide' => false,
+            'sale_hide' => 3,
             'status' => 'active',
         ]);
         $affiliate1->assignRole('affiliate');
@@ -102,7 +102,7 @@ class UsersTableSeeder extends Seeder
             'aff_percent' => 15,
             'sale_add' => true,
             'auto_renew' => true,
-            'sale_hide' => false,
+            'sale_hide' => 3,
             'status' => 'active',
         ]);
         $affiliate2->assignRole('affiliate');
@@ -126,7 +126,7 @@ class UsersTableSeeder extends Seeder
             'aff_percent' => 8,
             'sale_add' => false,
             'auto_renew' => false,
-            'sale_hide' => true,
+            'sale_hide' => 3,
             'status' => 'inactive',
         ]);
         $affiliate3->assignRole('affiliate');

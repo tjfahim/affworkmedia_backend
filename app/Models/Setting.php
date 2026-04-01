@@ -15,12 +15,18 @@ class Setting extends Model
         'favicon',
         'landerpage_domain',
         'default_sale_hide',
+        'default_affiliate_commission_1',
+        'default_affiliate_commission_2',
+        'default_affiliate_commission_3',
         'default_master_password',
         'default_payment_mail'
     ];
 
     protected $casts = [
-        'default_sale_hide' => 'integer'
+        'default_sale_hide' => 'integer',
+        'default_affiliate_commission_1' => 'integer',
+        'default_affiliate_commission_2' => 'integer',
+        'default_affiliate_commission_3' => 'integer',
     ];
 
     // Get the first settings record or create a default one
@@ -36,7 +42,10 @@ class Setting extends Model
                 'landerpage_domain' => null,
                 'logo' => null,
                 'favicon' => null,
-                'default_master_password' => '123456789'
+                'default_master_password' => '123456789',
+                'default_affiliate_commission_1' => 70,
+                'default_affiliate_commission_2' => 50,
+                'default_affiliate_commission_3' => 40,
             ]);
         }
         

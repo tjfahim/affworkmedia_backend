@@ -19,7 +19,7 @@ class User extends Authenticatable
      *
      * @var array<int, string>
      */
-    protected $fillable = [
+   protected $fillable = [
         'first_name',
         'last_name',
         'email',
@@ -35,10 +35,21 @@ class User extends Authenticatable
         'payoneer',
         'paypal',
         'aff_percent',
+        'default_affiliate_commission_1',
+        'default_affiliate_commission_2',
+        'default_affiliate_commission_3',
         'sale_add',
         'auto_renew',
         'sale_hide',
         'status',
+        'bank_details',
+        'edit_paypal_mail_status',
+        'edit_payoneer_mail_status',
+        'edit_bank_details_status',
+        'edit_binance_mail_status',
+        'edit_other_payment_method_description_status',
+        'binance',
+        'other_payment_method_description',
     ];
 
     /**
@@ -60,10 +71,19 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'balance' => 'decimal:2',
         'aff_percent' => 'decimal:2',
+        'default_affiliate_commission_1' => 'decimal:2',
+        'default_affiliate_commission_2' => 'decimal:2',
+        'default_affiliate_commission_3' => 'decimal:2',
         'auto_renew' => 'boolean',
-        'sale_add' => 'integer',
-        'sale_hide' => 'integer',
+        'sale_add' => 'boolean',
+        'sale_hide' => 'decimal:2',
+        'edit_paypal_mail_status' => 'string',
+        'edit_payoneer_mail_status' => 'string',
+        'edit_bank_details_status' => 'string',
+        'edit_binance_mail_status' => 'string',
+        'edit_other_payment_method_description_status' => 'string',
     ];
+
 
     // Accessors
     public function getFullNameAttribute(): string
@@ -75,6 +95,16 @@ class User extends Authenticatable
     public function scopeActive($query)
     {
         return $query->where('status', 'active');
+    }
+    public function scopeWithPendingPaymentRequests($query)
+    {
+        return $query->where(function($q) {
+            $q->where('edit_paypal_mail_status', 'requested')
+              ->orWhere('edit_payoneer_mail_status', 'requested')
+              ->orWhere('edit_bank_details_status', 'requested')
+              ->orWhere('edit_binance_mail_status', 'requested')
+              ->orWhere('edit_other_payment_method_description_status', 'requested');
+        });
     }
 
     // Add relationship
@@ -94,4 +124,39 @@ public function updateBalance($amount, $operation = 'add')
     
     return $this->save();
 }
+
+  public function hasActivePaymentMethod()
+    {
+        return $this->edit_paypal_mail_status === 'active' ||
+               $this->edit_payoneer_mail_status === 'active' ||
+               $this->edit_bank_details_status === 'active' ||
+               $this->edit_binance_mail_status === 'active' ||
+               $this->edit_other_payment_method_description_status === 'active';
+    }
+      public function getActivePaymentMethods()
+    {
+        $methods = [];
+        
+        if ($this->edit_paypal_mail_status === 'active' && $this->paypal) {
+            $methods['paypal'] = $this->paypal;
+        }
+        
+        if ($this->edit_payoneer_mail_status === 'active' && $this->payoneer) {
+            $methods['payoneer'] = $this->payoneer;
+        }
+        
+        if ($this->edit_bank_details_status === 'active' && $this->bank_details) {
+            $methods['bank'] = $this->bank_details;
+        }
+        
+        if ($this->edit_binance_mail_status === 'active' && $this->binance) {
+            $methods['binance'] = $this->binance;
+        }
+        
+        if ($this->edit_other_payment_method_description_status === 'active' && $this->other_payment_method_description) {
+            $methods['other'] = $this->other_payment_method_description;
+        }
+        
+        return $methods;
+    }
 }

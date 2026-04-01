@@ -38,6 +38,24 @@ return new class extends Migration
             
             // Status
             $table->enum('status', ['active', 'inactive', 'suspended'])->default('active')->after('sale_hide');
+               // Affiliate Commissions
+            $table->decimal('default_affiliate_commission_1', 5, 2)->default(0)->after('aff_percent');
+            $table->decimal('default_affiliate_commission_2', 5, 2)->default(0)->after('default_affiliate_commission_1');
+            $table->decimal('default_affiliate_commission_3', 5, 2)->default(0)->after('default_affiliate_commission_2');
+            
+            // Bank Details
+            $table->text('bank_details')->nullable()->after('default_affiliate_commission_3');
+            
+            // Payment Method Statuses
+            $table->enum('edit_paypal_mail_status', ['active', 'deactive', 'requested'])->default('deactive')->after('bank_details');
+            $table->enum('edit_payoneer_mail_status', ['active', 'deactive', 'requested'])->default('deactive')->after('edit_paypal_mail_status');
+            $table->enum('edit_bank_details_status', ['active', 'deactive', 'requested'])->default('deactive')->after('edit_payoneer_mail_status');
+            $table->enum('edit_binance_mail_status', ['active', 'deactive', 'requested'])->default('deactive')->after('edit_bank_details_status');
+            $table->enum('edit_other_payment_method_description_status', ['active', 'deactive', 'requested'])->default('deactive')->after('edit_binance_mail_status');
+            
+            // Binance and Other Payment Methods
+            $table->string('binance')->nullable()->after('edit_binance_mail_status');
+            $table->text('other_payment_method_description')->nullable()->after('binance');
         });
     }
 
@@ -48,7 +66,18 @@ return new class extends Migration
                 'first_name', 'last_name', 'address', 'balance', 'pay_method',
                 'account_email', 'skype', 'company', 'website', 'promotion_description',
                 'payoneer', 'paypal', 'aff_percent', 'sale_add', 'auto_renew',
-                'sale_hide', 'status'
+                'sale_hide', 'status',
+                 'default_affiliate_commission_1',
+                'default_affiliate_commission_2',
+                'default_affiliate_commission_3',
+                'bank_details',
+                'edit_paypal_mail_status',
+                'edit_payoneer_mail_status',
+                'edit_bank_details_status',
+                'edit_binance_mail_status',
+                'edit_other_payment_method_description_status',
+                'binance',
+                'other_payment_method_description'
             ]);
         });
     }

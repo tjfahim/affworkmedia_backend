@@ -20,10 +20,43 @@ Route::post('/login', [AuthController::class, 'login']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
+ // User profile routes
     Route::get('/profile', [AuthController::class, 'profile']);
     Route::put('/profile', [AuthController::class, 'updateProfile']);
     Route::put('/change-password', [AuthController::class, 'changePassword']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    
+    // Affiliate settings (for authenticated user)
+    Route::put('/affiliate/settings', [AuthController::class, 'updateAffiliateSettings']);
+    
+    // Payment method change request (for authenticated user)
+    Route::post('/affiliate/request-payment-change', [AuthController::class, 'requestPaymentMethodChange']);
+    
+    // User management routes (Admin only)
+    Route::middleware(['permission:view users'])->group(function () {
+        Route::get('/users', [AuthController::class, 'index']);
+        Route::get('/users/{user}', [AuthController::class, 'show']);
+        Route::get('/users/payment-requests/pending', [AuthController::class, 'getPendingPaymentRequests']);
+    });
+    
+    Route::middleware(['permission:create users'])->group(function () {
+        Route::post('/users', [AuthController::class, 'store']);
+    });
+    
+    Route::middleware(['permission:edit users'])->group(function () {
+        Route::put('/users/{user}', [AuthController::class, 'update']);
+        Route::put('/users/{user}/affiliate', [AuthController::class, 'updateAffiliateSettings']);
+        
+        Route::post('/users/bulk-update', [AuthController::class, 'bulkUpdate']);
+        Route::put('/users/{user}/payment-status', [AuthController::class, 'updatePaymentStatus']);
+    });
+    
+    Route::middleware(['permission:delete users'])->group(function () {
+        Route::delete('/users/{user}', [AuthController::class, 'destroy']);
+    });
+
+
+
     
 
     Route::apiResource('users', UserController::class);
@@ -32,14 +65,24 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/permissions', [RoleController::class, 'permissions']);
         Route::put('/{role}/permissions', [RoleController::class, 'updatePermissions']);
     });
-    
-    Route::apiResource('affiliates', AffiliateController::class);
-    
-    Route::prefix('affiliates')->group(function () {
+     Route::prefix('affiliates')->group(function () {
+        Route::get('/', [AffiliateController::class, 'index']);
         Route::get('/all/list', [AffiliateController::class, 'getAllAffiliates']);
+        Route::get('/{id}', [AffiliateController::class, 'show']);
+        Route::get('/{id}/payment-methods', [AffiliateController::class, 'getPaymentMethods']);
+        Route::post('/', [AffiliateController::class, 'store']);
+        Route::put('/{id}', [AffiliateController::class, 'update']);
+        Route::delete('/{id}', [AffiliateController::class, 'destroy']);
         Route::patch('/{id}/status', [AffiliateController::class, 'updateStatus']);
         Route::patch('/{id}/commission', [AffiliateController::class, 'updateCommission']);
+        Route::patch('/{id}/commission-levels', [AffiliateController::class, 'updateCommissionLevels']);
+        Route::patch('/{id}/payment-status', [AffiliateController::class, 'updatePaymentStatus']);
     });
+
+
+
+
+    
     Route::prefix('users/{user}')->group(function () {
         Route::get('/permissions', [UserPermissionController::class, 'getUserPermissions']);
         Route::put('/permissions', [UserPermissionController::class, 'assignDirectPermissions']);
@@ -90,31 +133,11 @@ Route::prefix('affiliate-payments')->middleware(['auth:sanctum'])->group(functio
     Route::delete('/{id}', [AffiliatePaymentController::class, 'deletePayment']);
     Route::get('/{id}/invoice', [AffiliatePaymentController::class, 'generateInvoice']);
 });
-    Route::put('/affiliate/settings', [AuthController::class, 'updateAffiliateSettings']);
-
 
 
 
 
 
     
-
-    Route::middleware(['permission:view users'])->group(function () {
-        Route::get('/users', [AuthController::class, 'index']);
-        Route::get('/users/{user}', [AuthController::class, 'show']);
-    });
-    
-    Route::middleware(['permission:create users'])->group(function () {
-        Route::post('/users', [AuthController::class, 'store']);
-    });
-    
-    Route::middleware(['permission:edit users'])->group(function () {
-        Route::put('/users/{user}', [AuthController::class, 'update']);
-        Route::put('/users/{user}/affiliate', [AuthController::class, 'updateAffiliateSettings']);
-        Route::post('/users/bulk-update', [AuthController::class, 'bulkUpdate']);
-    });
-    
-    Route::middleware(['permission:delete users'])->group(function () {
-        Route::delete('/users/{user}', [AuthController::class, 'destroy']);
-    });
+     
 });

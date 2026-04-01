@@ -27,13 +27,7 @@ class SettingController extends Controller
    // Add this to your update method in SettingController.php temporarily for debugging
 public function update(Request $request)
 {
-    // Debug: Log all incoming data
-    \Log::info('Update settings request:', [
-        'all' => $request->all(),
-        'has_logo' => $request->hasFile('logo'),
-        'has_favicon' => $request->hasFile('favicon'),
-        'files' => $request->allFiles()
-    ]);
+    
     
     $validator = Validator::make($request->all(), [
         'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
@@ -42,6 +36,9 @@ public function update(Request $request)
         'default_sale_hide' => 'nullable|integer|min:0|max:100',
         'default_master_password' => 'nullable|string|min:6',
         'default_payment_mail' => 'nullable|email|max:255',
+        'default_affiliate_commission_1' => 'nullable|integer|min:0|max:100',
+        'default_affiliate_commission_2' => 'nullable|integer|min:0|max:100',
+        'default_affiliate_commission_3' => 'nullable|integer|min:0|max:100',
     ]);
 
     if ($validator->fails()) {
@@ -63,6 +60,17 @@ public function update(Request $request)
     if ($request->has('default_sale_hide')) {
         $data['default_sale_hide'] = (int) $request->default_sale_hide;
     }
+      if ($request->has('default_affiliate_commission_1')) {
+            $data['default_affiliate_commission_1'] = (int) $request->default_affiliate_commission_1;
+        }
+        
+        if ($request->has('default_affiliate_commission_2')) {
+            $data['default_affiliate_commission_2'] = (int) $request->default_affiliate_commission_2;
+        }
+        
+        if ($request->has('default_affiliate_commission_3')) {
+            $data['default_affiliate_commission_3'] = (int) $request->default_affiliate_commission_3;
+        }
 
     if ($request->has('default_payment_mail')) {
         $data['default_payment_mail'] = $request->default_payment_mail;
@@ -78,7 +86,6 @@ public function update(Request $request)
         // Delete old logo if exists
         if ($currentSettings && $currentSettings->logo) {
             Storage::disk('public')->delete($currentSettings->logo);
-            \Log::info('Deleted old logo:', ['path' => $currentSettings->logo]);
         }
 
         $logo = $request->file('logo');
@@ -86,7 +93,6 @@ public function update(Request $request)
         $logoPath = $logo->storeAs('settings', $logoName, 'public');
         $data['logo'] = $logoPath;
         
-        \Log::info('Uploaded new logo:', ['path' => $logoPath, 'original_name' => $logo->getClientOriginalName()]);
     }
 
     // Handle favicon upload
@@ -94,7 +100,6 @@ public function update(Request $request)
         // Delete old favicon if exists
         if ($currentSettings && $currentSettings->favicon) {
             Storage::disk('public')->delete($currentSettings->favicon);
-            \Log::info('Deleted old favicon:', ['path' => $currentSettings->favicon]);
         }
 
         $favicon = $request->file('favicon');
@@ -102,18 +107,13 @@ public function update(Request $request)
         $faviconPath = $favicon->storeAs('settings', $faviconName, 'public');
         $data['favicon'] = $faviconPath;
         
-        \Log::info('Uploaded new favicon:', ['path' => $faviconPath, 'original_name' => $favicon->getClientOriginalName()]);
     }
 
-    // Debug: Log final data before update
-    \Log::info('Final data for update:', $data);
     
     // Update or create settings
     $settings = Setting::updateSettings($data);
     
-    // Debug: Log updated settings
-    \Log::info('Updated settings:', $settings->toArray());
-    
+   
     // Don't expose master password in response
     $settings->makeHidden(['default_master_password']);
     

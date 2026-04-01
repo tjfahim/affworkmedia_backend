@@ -18,7 +18,7 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
@@ -32,6 +32,9 @@ class AuthController extends Controller
             'promotion_description' => 'nullable|string',
             'payoneer' => 'nullable|string|max:255',
             'paypal' => 'nullable|email',
+            'binance' => 'nullable|string|max:255',
+            'bank_details' => 'nullable|string',
+            'other_payment_method_description' => 'nullable|string',
             'role' => 'sometimes|string|in:super-admin,admin,affiliate',
         ]);
 
@@ -39,28 +42,41 @@ class AuthController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $user = User::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'address' => $request->address,
-            'pay_method' => $request->pay_method,
-            'account_email' => $request->account_email,
-            'skype' => $request->skype,
-            'company' => $request->company,
-            'website' => $request->website,
-            'promotion_description' => $request->promotion_description,
-            'payoneer' => $request->payoneer,
-            'paypal' => $request->paypal,
-            'balance' => 0,
-            'aff_percent' => $request->role === 'affiliate' ? 5 : 0, // Default 5% for affiliates
-            'sale_add' => true,
-            'auto_renew' => false,
-            'sale_hide' => false,
-            'status' => 'inactive',
-        ]);
+               $settings = Setting::getSettings(); // <-- Add this line
 
+           $user = User::create([
+        'first_name' => $request->first_name,
+        'last_name' => $request->last_name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'address' => $request->address,
+        'pay_method' => $request->pay_method,
+        'account_email' => $request->account_email,
+        'skype' => $request->skype,
+        'company' => $request->company,
+        'website' => $request->website,
+        'promotion_description' => $request->promotion_description,
+        'payoneer' => $request->payoneer,
+        'paypal' => $request->paypal,
+        'binance' => $request->binance,
+        'bank_details' => $request->bank_details,
+        'other_payment_method_description' => $request->other_payment_method_description,
+        'balance' => 0,
+        'aff_percent' => $request->role === 'affiliate' ? 5 : 0,
+        'default_affiliate_commission_1' => $settings->default_affiliate_commission_1 ?? 0,
+        'default_affiliate_commission_2' => $settings->default_affiliate_commission_2 ?? 0,
+        'default_affiliate_commission_3' => $settings->default_affiliate_commission_3 ?? 0,
+        'sale_add' => true,
+        'auto_renew' => false,
+        'sale_hide' => 3,
+        'status' => 'inactive',
+        // Default statuses for payment methods
+        'edit_paypal_mail_status' => 'deactive',
+        'edit_payoneer_mail_status' => 'deactive',
+        'edit_bank_details_status' => 'deactive',
+        'edit_binance_mail_status' => 'deactive',
+        'edit_other_payment_method_description_status' => 'deactive',
+    ]);
         // Assign role
         $role = $request->role ?? 'affiliate';
         $user->assignRole($role);
@@ -193,7 +209,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
-        $validator = Validator::make($request->all(), [
+         $validator = Validator::make($request->all(), [
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
             'address' => 'nullable|string',
@@ -205,13 +221,16 @@ class AuthController extends Controller
             'promotion_description' => 'nullable|string',
             'payoneer' => 'nullable|string|max:255',
             'paypal' => 'nullable|email',
+            'binance' => 'nullable|string|max:255',
+            'bank_details' => 'nullable|string',
+            'other_payment_method_description' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $user->update($request->only([
+         $user->update($request->only([
             'first_name',
             'last_name',
             'address',
@@ -223,6 +242,9 @@ class AuthController extends Controller
             'promotion_description',
             'payoneer',
             'paypal',
+            'binance',
+            'bank_details',
+            'other_payment_method_description',
         ]));
 
         return response()->json([
@@ -494,11 +516,17 @@ class AuthController extends Controller
 
         $validator = Validator::make($request->all(), [
             'aff_percent' => 'sometimes|numeric|min:0|max:100',
+            'default_affiliate_commission_1' => 'sometimes|numeric|min:0|max:100',
+            'default_affiliate_commission_2' => 'sometimes|numeric|min:0|max:100',
+            'default_affiliate_commission_3' => 'sometimes|numeric|min:0|max:100',
             'sale_add' => 'sometimes|boolean',
             'auto_renew' => 'sometimes|boolean',
-            'sale_hide' => 'sometimes|boolean',
+            'sale_hide' => 'sometimes|numeric|min:0|max:100',
             'paypal' => 'nullable|email',
             'payoneer' => 'nullable|string',
+            'binance' => 'nullable|string',
+            'bank_details' => 'nullable|string',
+            'other_payment_method_description' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
@@ -507,20 +535,149 @@ class AuthController extends Controller
 
         $user->update($request->only([
             'aff_percent',
+            'default_affiliate_commission_1',
+            'default_affiliate_commission_2',
+            'default_affiliate_commission_3',
             'sale_add',
             'auto_renew',
             'sale_hide',
             'paypal',
-            'payoneer'
+            'payoneer',
+            'binance',
+            'bank_details',
+            'other_payment_method_description',
         ]));
 
         return response()->json([
             'success' => true,
             'message' => 'Affiliate settings updated successfully',
-            'user' => $user->fresh()
+                        'user' => $user->fresh()->load('roles', 'permissions')
+
         ]);
     }
 
+
+      public function updatePaymentStatus(Request $request, $id)
+    {
+        if (!$request->user()->can('manage affiliate')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $user = User::find($id);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'edit_paypal_mail_status' => 'sometimes|in:active,deactive,requested',
+            'edit_payoneer_mail_status' => 'sometimes|in:active,deactive,requested',
+            'edit_bank_details_status' => 'sometimes|in:active,deactive,requested',
+            'edit_binance_mail_status' => 'sometimes|in:active,deactive,requested',
+            'edit_other_payment_method_description_status' => 'sometimes|in:active,deactive,requested',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user->update($request->only([
+            'edit_paypal_mail_status',
+            'edit_payoneer_mail_status',
+            'edit_bank_details_status',
+            'edit_binance_mail_status',
+            'edit_other_payment_method_description_status',
+        ]));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Payment method statuses updated successfully',
+            'user' => $user->fresh()->load('roles', 'permissions')
+
+        ]);
+    }
+
+    public function requestPaymentMethodChange(Request $request)
+{
+    $user = $request->user();
+    
+    $validator = Validator::make($request->all(), [
+        'payment_type' => 'required|in:paypal,payoneer,bank,binance,other',
+        'value' => 'nullable|string', // Changed from 'required' to 'nullable'
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
+
+    $statusField = '';
+    $valueField = '';
+
+    switch ($request->payment_type) {
+        case 'paypal':
+            $statusField = 'edit_paypal_mail_status';
+            $valueField = 'paypal';
+            break;
+        case 'payoneer':
+            $statusField = 'edit_payoneer_mail_status';
+            $valueField = 'payoneer';
+            break;
+        case 'bank':
+            $statusField = 'edit_bank_details_status';
+            $valueField = 'bank_details';
+            break;
+        case 'binance':
+            $statusField = 'edit_binance_mail_status';
+            $valueField = 'binance';
+            break;
+        case 'other':
+            $statusField = 'edit_other_payment_method_description_status';
+            $valueField = 'other_payment_method_description';
+            break;
+    }
+
+    // Update the payment method value (can be empty) and set status to requested
+    $updateData = [
+        $statusField => 'requested'
+    ];
+    
+    // Only update the value field if it's provided (not null)
+    if ($request->has('value') && $request->value !== null) {
+        $updateData[$valueField] = $request->value;
+    }
+    
+    $user->update($updateData);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Payment method change request submitted successfully',
+        'user' => $user->fresh()->load('roles', 'permissions')
+    ]);
+}
+  public function getPendingPaymentRequests(Request $request)
+    {
+        if (!$request->user()->can('manage affiliate')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $users = User::withScope('withPendingPaymentRequests')
+            ->with('roles')
+            ->paginate($request->per_page ?? 15);
+
+        return response()->json([
+            'success' => true,
+            'users' => $users
+        ]);
+    }
     /**
      * Bulk update users (Admin only)
      */
