@@ -2,6 +2,7 @@
 // routes/api.php
 
 use App\Http\Controllers\AffiliateController;
+use App\Http\Controllers\AffiliateOfferController;
 use App\Http\Controllers\AffiliatePaymentController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -132,9 +133,18 @@ Route::prefix('affiliate-payments')->middleware(['auth:sanctum'])->group(functio
     Route::patch('/{id}/status', [AffiliatePaymentController::class, 'updatePaymentStatus']);
     Route::delete('/{id}', [AffiliatePaymentController::class, 'deletePayment']);
     Route::get('/{id}/invoice', [AffiliatePaymentController::class, 'generateInvoice']);
+
+    
 });
 
 
+  Route::middleware(['role:affiliate'])->prefix('affiliate')->group(function () {
+        Route::get('/games', [AffiliateOfferController::class, 'getGames']);
+        Route::get('/games/{gameId}/events', [AffiliateOfferController::class, 'getGameEvents']);
+        Route::get('/games/{gameId}/events-with-tracking', [AffiliateOfferController::class, 'getGameEventsWithTracking']);
+        Route::get('/events/{eventId}', [AffiliateOfferController::class, 'getEventDetails']);
+        Route::post('/generate-tracking-link', [AffiliateOfferController::class, 'generateTrackingLink']);
+    });
 
 
 

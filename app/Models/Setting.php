@@ -39,7 +39,7 @@ class Setting extends Model
             $settings = self::create([
                 'default_sale_hide' => 0,
                 'default_payment_mail' => null,
-                'landerpage_domain' => null,
+                'landerpage_domain' => 'http://localhost:3000/',
                 'logo' => null,
                 'favicon' => null,
                 'default_master_password' => '123456789',

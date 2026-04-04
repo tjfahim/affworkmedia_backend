@@ -47,4 +47,10 @@ class GameManage extends Model
     {
         return $query->orderBy('order_number', 'asc');
     }
+
+
+    public function events()
+    {
+        return $this->hasMany(EventManage::class, 'game_manage_id');
+    }
 }
