@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             UsersTableSeeder::class,
             GameManageSeeder::class,
             TeamManageSeeder::class,
+            EventManageSeeder::class,
         ]);
     }
 }

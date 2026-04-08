@@ -27,9 +27,6 @@ class UsersTableSeeder extends Seeder
             'promotion_description' => 'Super Admin Account',
             'payoneer' => 'superadmin@payoneer.com',
             'paypal' => 'superadmin@paypal.com',
-            'aff_percent' => 0,
-            'sale_add' => true,
-            'auto_renew' => true,
             'sale_hide' => 3,
             'status' => 'active',
         ]);
@@ -51,9 +48,6 @@ class UsersTableSeeder extends Seeder
             'promotion_description' => 'Admin Account',
             'payoneer' => 'admin@payoneer.com',
             'paypal' => 'admin@paypal.com',
-            'aff_percent' => 0,
-            'sale_add' => true,
-            'auto_renew' => true,
             'sale_hide' => 3,
             'status' => 'active',
         ]);
@@ -75,9 +69,6 @@ class UsersTableSeeder extends Seeder
             'promotion_description' => 'Digital marketing specialist focusing on tech products',
             'payoneer' => 'sarah@payoneer.com',
             'paypal' => 'sarah@paypal.com',
-            'aff_percent' => 10,
-            'sale_add' => true,
-            'auto_renew' => false,
             'sale_hide' => 3,
             'status' => 'active',
         ]);
@@ -99,9 +90,6 @@ class UsersTableSeeder extends Seeder
             'promotion_description' => 'Tech reviewer and affiliate marketer for software products',
             'payoneer' => 'mike@payoneer.com',
             'paypal' => 'mike@paypal.com',
-            'aff_percent' => 15,
-            'sale_add' => true,
-            'auto_renew' => true,
             'sale_hide' => 3,
             'status' => 'active',
         ]);
@@ -123,9 +111,6 @@ class UsersTableSeeder extends Seeder
             'promotion_description' => 'Social media influencer and affiliate marketer',
             'payoneer' => 'emma@payoneer.com',
             'paypal' => 'emma@paypal.com',
-            'aff_percent' => 8,
-            'sale_add' => false,
-            'auto_renew' => false,
             'sale_hide' => 3,
             'status' => 'inactive',
         ]);

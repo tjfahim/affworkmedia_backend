@@ -89,7 +89,7 @@ class AffiliateOfferController extends Controller
                 ->get();
             
             $settings = Setting::getSettings();
-            $landerpageDomain = $settings->landerpage_domain ?? 'http://localhost:3000/';
+            $landerpageDomain = $settings->landerpage_domain ?? 'http://127.0.0.1:8000/';
             $affiliateId = Auth::id();
             
             return response()->json([
@@ -125,7 +125,7 @@ class AffiliateOfferController extends Controller
             }
             
             $settings = Setting::getSettings();
-            $landerpageDomain = $settings->landerpage_domain ?? 'http://localhost:3000/';
+            $landerpageDomain = $settings->landerpage_domain ?? 'http://127.0.0.1:8000/';
             $affiliateId = Auth::id();
             
             $baseTrackingLink = rtrim($landerpageDomain, '/');
@@ -167,7 +167,7 @@ class AffiliateOfferController extends Controller
             }
             
             $settings = Setting::getSettings();
-            $landerpageDomain = $settings->landerpage_domain ?? 'http://localhost:3000/';
+            $landerpageDomain = $settings->landerpage_domain ?? 'http://127.0.0.1:8000/';
             $affiliateId = Auth::id();
             
             $trackingLink = rtrim($landerpageDomain, '/');

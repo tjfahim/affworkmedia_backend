@@ -37,7 +37,7 @@ class Setting extends Model
         // If no settings exist, create default settings
         if (!$settings) {
             $settings = self::create([
-                'default_sale_hide' => 0,
+                'default_sale_hide' => 3,
                 'default_payment_mail' => null,
                 'landerpage_domain' => 'http://localhost:3000/',
                 'logo' => null,

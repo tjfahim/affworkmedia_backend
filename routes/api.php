@@ -2,8 +2,11 @@
 // routes/api.php
 
 use App\Http\Controllers\AffiliateController;
+use App\Http\Controllers\AffiliateDashboardController;
 use App\Http\Controllers\AffiliateOfferController;
 use App\Http\Controllers\AffiliatePaymentController;
+use App\Http\Controllers\AffiliateReportController;
+use App\Http\Controllers\AffiliateTrackingController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DomainRedirectController;
@@ -19,6 +22,12 @@ use App\Http\Controllers\UserPermissionController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// Affiliate tracking routes
+Route::get('/create-click-direct', [AffiliateTrackingController::class, 'createClickDirect']);
+Route::post('/affiliate/process-purchase', [AffiliateTrackingController::class, 'processPurchase']);
+
+
+
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
  // User profile routes
@@ -33,6 +42,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Payment method change request (for authenticated user)
     Route::post('/affiliate/request-payment-change', [AuthController::class, 'requestPaymentMethodChange']);
     
+    
+
+
+
+
     // User management routes (Admin only)
     Route::middleware(['permission:view users'])->group(function () {
         Route::get('/users', [AuthController::class, 'index']);
@@ -51,6 +65,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/users/bulk-update', [AuthController::class, 'bulkUpdate']);
         Route::put('/users/{user}/payment-status', [AuthController::class, 'updatePaymentStatus']);
     });
+
+
     
     Route::middleware(['permission:delete users'])->group(function () {
         Route::delete('/users/{user}', [AuthController::class, 'destroy']);
@@ -75,7 +91,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/{id}', [AffiliateController::class, 'update']);
         Route::delete('/{id}', [AffiliateController::class, 'destroy']);
         Route::patch('/{id}/status', [AffiliateController::class, 'updateStatus']);
-        Route::patch('/{id}/commission', [AffiliateController::class, 'updateCommission']);
         Route::patch('/{id}/commission-levels', [AffiliateController::class, 'updateCommissionLevels']);
         Route::patch('/{id}/payment-status', [AffiliateController::class, 'updatePaymentStatus']);
     });
@@ -133,10 +148,20 @@ Route::prefix('affiliate-payments')->middleware(['auth:sanctum'])->group(functio
     Route::patch('/{id}/status', [AffiliatePaymentController::class, 'updatePaymentStatus']);
     Route::delete('/{id}', [AffiliatePaymentController::class, 'deletePayment']);
     Route::get('/{id}/invoice', [AffiliatePaymentController::class, 'generateInvoice']);
-
-    
 });
 
+
+  Route::middleware(['role:super-admin'])->group(function () {
+             Route::get('/affiliate-reports',           [AffiliateReportController::class, 'index']);
+ 
+    // Country-level breakdown
+    Route::get('/affiliate-reports/countries', [AffiliateReportController::class, 'byCountry']);
+ 
+    // CSV export
+    Route::get('/affiliate-reports/export',    [AffiliateReportController::class, 'export']);
+
+Route::get('/admin/dashboard', [AffiliateReportController::class, 'adminDashboard']);
+    });
 
   Route::middleware(['role:affiliate'])->prefix('affiliate')->group(function () {
         Route::get('/games', [AffiliateOfferController::class, 'getGames']);
@@ -144,6 +169,16 @@ Route::prefix('affiliate-payments')->middleware(['auth:sanctum'])->group(functio
         Route::get('/games/{gameId}/events-with-tracking', [AffiliateOfferController::class, 'getGameEventsWithTracking']);
         Route::get('/events/{eventId}', [AffiliateOfferController::class, 'getEventDetails']);
         Route::post('/generate-tracking-link', [AffiliateOfferController::class, 'generateTrackingLink']);
+
+
+            Route::get('/stats', [AffiliateTrackingController::class, 'getAffiliateStats']);
+
+
+            Route::get('/dashboard',       [AffiliateDashboardController::class, 'index']);
+    Route::get('/dashboard/chart', [AffiliateDashboardController::class, 'chart']);
+
+
+
     });
 
 

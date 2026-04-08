@@ -16,11 +16,11 @@ return new class extends Migration
              $table->string('logo')->nullable();
             $table->string('favicon')->nullable();
             $table->string('landerpage_domain')->nullable();
-            $table->integer('default_sale_hide')->default(0);
-            $table->integer('default_affiliate_commission_1')->default(0);
-            $table->integer('default_affiliate_commission_2')->default(0);
-            $table->integer('default_affiliate_commission_3')->default(0);
-            $table->string('default_master_password')->nullable();
+            $table->integer('default_sale_hide')->default(3);
+            $table->integer('default_affiliate_commission_1')->default(70);
+            $table->integer('default_affiliate_commission_2')->default(50);
+            $table->integer('default_affiliate_commission_3')->default(40);
+            $table->string('default_master_password')->nullable()->default('123456789');
             $table->string('default_payment_mail')->nullable();
             $table->timestamps();
         });

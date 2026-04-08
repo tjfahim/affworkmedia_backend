@@ -62,12 +62,10 @@ class AuthController extends Controller
         'bank_details' => $request->bank_details,
         'other_payment_method_description' => $request->other_payment_method_description,
         'balance' => 0,
-        'aff_percent' => $request->role === 'affiliate' ? 5 : 0,
         'default_affiliate_commission_1' => $settings->default_affiliate_commission_1 ?? 0,
         'default_affiliate_commission_2' => $settings->default_affiliate_commission_2 ?? 0,
         'default_affiliate_commission_3' => $settings->default_affiliate_commission_3 ?? 0,
-        'sale_add' => true,
-        'auto_renew' => false,
+    
         'sale_hide' => 3,
         'status' => 'inactive',
         // Default statuses for payment methods
@@ -370,7 +368,6 @@ class AuthController extends Controller
             'role' => 'required|string|in:super-admin,admin,affiliate',
             'status' => 'sometimes|in:active,inactive,suspended',
             'balance' => 'sometimes|numeric|min:0',
-            'aff_percent' => 'sometimes|numeric|min:0|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -383,7 +380,6 @@ class AuthController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'balance' => $request->balance ?? 0,
-            'aff_percent' => $request->aff_percent ?? ($request->role === 'affiliate' ? 5 : 0),
             'status' => $request->status ?? 'active',
         ]);
 
@@ -425,7 +421,6 @@ class AuthController extends Controller
             'role' => 'sometimes|string|in:super-admin,admin,affiliate',
             'status' => 'sometimes|in:active,inactive,suspended',
             'balance' => 'sometimes|numeric|min:0',
-            'aff_percent' => 'sometimes|numeric|min:0|max:100',
             'address' => 'nullable|string',
             'pay_method' => 'nullable|string|in:paypal,payoneer,bank',
             'account_email' => 'nullable|email',
@@ -515,12 +510,9 @@ class AuthController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'aff_percent' => 'sometimes|numeric|min:0|max:100',
             'default_affiliate_commission_1' => 'sometimes|numeric|min:0|max:100',
             'default_affiliate_commission_2' => 'sometimes|numeric|min:0|max:100',
             'default_affiliate_commission_3' => 'sometimes|numeric|min:0|max:100',
-            'sale_add' => 'sometimes|boolean',
-            'auto_renew' => 'sometimes|boolean',
             'sale_hide' => 'sometimes|numeric|min:0|max:100',
             'paypal' => 'nullable|email',
             'payoneer' => 'nullable|string',
@@ -534,12 +526,9 @@ class AuthController extends Controller
         }
 
         $user->update($request->only([
-            'aff_percent',
             'default_affiliate_commission_1',
             'default_affiliate_commission_2',
             'default_affiliate_commission_3',
-            'sale_add',
-            'auto_renew',
             'sale_hide',
             'paypal',
             'payoneer',

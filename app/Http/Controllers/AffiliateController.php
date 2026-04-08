@@ -66,12 +66,9 @@ class AffiliateController extends Controller
             'binance' => 'nullable|string|max:255',
             'bank_details' => 'nullable|string',
             'other_payment_method_description' => 'nullable|string',
-            'aff_percent' => 'nullable|numeric|min:0|max:100',
             'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
             'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
             'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
-            'sale_add' => 'nullable|boolean',
-            'auto_renew' => 'nullable|boolean',
             'sale_hide' => 'nullable|numeric|min:0|max:100',
             'status' => 'sometimes|in:active,inactive,suspended'
         ]);
@@ -105,12 +102,9 @@ class AffiliateController extends Controller
             'binance' => $request->binance,
             'bank_details' => $request->bank_details,
             'other_payment_method_description' => $request->other_payment_method_description,
-            'aff_percent' => $request->aff_percent ?? 0,
             'default_affiliate_commission_1' => $request->default_affiliate_commission_1 ?? $settings->default_affiliate_commission_1 ?? 0,
             'default_affiliate_commission_2' => $request->default_affiliate_commission_2 ?? $settings->default_affiliate_commission_2 ?? 0,
             'default_affiliate_commission_3' => $request->default_affiliate_commission_3 ?? $settings->default_affiliate_commission_3 ?? 0,
-            'sale_add' => $request->sale_add ?? false,
-            'auto_renew' => $request->auto_renew ?? false,
             'sale_hide' => $request->sale_hide ?? 3,
             'status' => $request->status ?? 'active',
             // Default statuses for payment methods
@@ -183,12 +177,9 @@ class AffiliateController extends Controller
         'binance' => 'nullable|string|max:255',
         'bank_details' => 'nullable|string',
         'other_payment_method_description' => 'nullable|string',
-        'aff_percent' => 'nullable|numeric|min:0|max:100',
         'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
         'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
         'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
-        'sale_add' => 'nullable|boolean',
-        'auto_renew' => 'nullable|boolean',
         'sale_hide' => 'nullable|numeric|min:0|max:100',
         'status' => 'sometimes|in:active,inactive,suspended',
         'edit_paypal_mail_status' => 'sometimes|in:active,deactive,requested',
@@ -223,12 +214,9 @@ class AffiliateController extends Controller
         'binance',
         'bank_details',
         'other_payment_method_description',
-        'aff_percent',
         'default_affiliate_commission_1',
         'default_affiliate_commission_2',
         'default_affiliate_commission_3',
-        'sale_add',
-        'auto_renew',
         'sale_hide',
         'status',
         'edit_paypal_mail_status',
@@ -309,41 +297,6 @@ class AffiliateController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Affiliate status updated successfully',
-            'affiliate' => $affiliate
-        ]);
-    }
-
-    /**
-     * Update affiliate commission rate
-     */
-    public function updateCommission(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'aff_percent' => 'required|numeric|min:0|max:100'
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        $affiliate = User::role('affiliate')->find($id);
-        
-        if (!$affiliate) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Affiliate not found'
-            ], 404);
-        }
-
-        $affiliate->aff_percent = $request->aff_percent;
-        $affiliate->save();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Affiliate commission updated successfully',
             'affiliate' => $affiliate
         ]);
     }

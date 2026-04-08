@@ -31,15 +31,13 @@ return new class extends Migration
             $table->string('paypal')->nullable()->after('payoneer');
             
             // Affiliate Settings
-            $table->decimal('aff_percent', 5, 2)->default(0)->after('paypal');
-            $table->integer('sale_add')->default(0)->after('aff_percent');
-            $table->boolean('auto_renew')->default(false)->after('sale_add');
-            $table->integer('sale_hide')->default(0)->after('auto_renew');
+          
+            $table->integer('sale_hide')->default(0)->after('paypal');
             
             // Status
             $table->enum('status', ['active', 'inactive', 'suspended'])->default('active')->after('sale_hide');
                // Affiliate Commissions
-            $table->decimal('default_affiliate_commission_1', 5, 2)->default(0)->after('aff_percent');
+            $table->decimal('default_affiliate_commission_1', 5, 2)->default(0)->after('sale_hide');
             $table->decimal('default_affiliate_commission_2', 5, 2)->default(0)->after('default_affiliate_commission_1');
             $table->decimal('default_affiliate_commission_3', 5, 2)->default(0)->after('default_affiliate_commission_2');
             
@@ -65,7 +63,7 @@ return new class extends Migration
             $table->dropColumn([
                 'first_name', 'last_name', 'address', 'balance', 'pay_method',
                 'account_email', 'skype', 'company', 'website', 'promotion_description',
-                'payoneer', 'paypal', 'aff_percent', 'sale_add', 'auto_renew',
+                'payoneer', 'paypal', 
                 'sale_hide', 'status',
                  'default_affiliate_commission_1',
                 'default_affiliate_commission_2',

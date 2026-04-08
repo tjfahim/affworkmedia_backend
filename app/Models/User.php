@@ -34,12 +34,9 @@ class User extends Authenticatable
         'promotion_description',
         'payoneer',
         'paypal',
-        'aff_percent',
         'default_affiliate_commission_1',
         'default_affiliate_commission_2',
         'default_affiliate_commission_3',
-        'sale_add',
-        'auto_renew',
         'sale_hide',
         'status',
         'bank_details',
@@ -50,6 +47,10 @@ class User extends Authenticatable
         'edit_other_payment_method_description_status',
         'binance',
         'other_payment_method_description',
+        'total_earnings',
+        'total_sales',
+        'unique_clicks',
+        'total_clicks',
     ];
 
     /**
@@ -70,12 +71,9 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'balance' => 'decimal:2',
-        'aff_percent' => 'decimal:2',
         'default_affiliate_commission_1' => 'decimal:2',
         'default_affiliate_commission_2' => 'decimal:2',
         'default_affiliate_commission_3' => 'decimal:2',
-        'auto_renew' => 'boolean',
-        'sale_add' => 'boolean',
         'sale_hide' => 'decimal:2',
         'edit_paypal_mail_status' => 'string',
         'edit_payoneer_mail_status' => 'string',

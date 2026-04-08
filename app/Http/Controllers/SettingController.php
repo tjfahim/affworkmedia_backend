@@ -33,7 +33,7 @@ public function update(Request $request)
         'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
         'favicon' => 'nullable|image|mimes:ico,png|max:1024',
         'landerpage_domain' => 'nullable|string|max:255',
-        'default_sale_hide' => 'nullable|integer|min:0|max:100',
+        'default_sale_hide' => 'nullable|integer|min:0|max:10',
         'default_master_password' => 'nullable|string|min:6',
         'default_payment_mail' => 'nullable|email|max:255',
         'default_affiliate_commission_1' => 'nullable|integer|min:0|max:100',
