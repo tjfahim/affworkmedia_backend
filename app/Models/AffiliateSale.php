@@ -19,6 +19,7 @@ class AffiliateSale extends Model
         'package_price',
         'commission_percentage',
         'commission_amount',
+        'is_hidden',
         'customer_name',
         'customer_email',
         'customer_country',

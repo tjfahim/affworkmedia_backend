@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AffiliateSale;
 use App\Models\User;
 use App\Models\Setting;
 use Illuminate\Http\Request;
@@ -69,7 +70,7 @@ class AffiliateController extends Controller
             'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
             'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
             'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
-            'sale_hide' => 'nullable|numeric|min:0|max:100',
+            'sale_hide' => 'nullable|numeric|min:0|max:10',
             'status' => 'sometimes|in:active,inactive,suspended',
             'phone_number' => 'nullable|string|max:20',
             'telegram_account' => 'nullable|string|max:255',
@@ -154,110 +155,126 @@ class AffiliateController extends Controller
     /**
      * Update affiliate
      */
- public function update(Request $request, $id)
-{
-    $affiliate = User::role('affiliate')->find($id);
-    
-    if (!$affiliate) {
+     public function update(Request $request, $id)
+    {
+        $affiliate = User::role('affiliate')->find($id);
+        
+        if (!$affiliate) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Affiliate not found'
+            ], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'first_name' => 'sometimes|string|max:255',
+            'last_name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|email|unique:users,email,' . $id,
+            'password' => 'nullable|string|min:6',
+            'address' => 'nullable|string',
+            'balance' => 'nullable|numeric|min:0',
+            'pay_method' => 'nullable|string|max:255',
+            'account_email' => 'nullable|email',
+            'skype' => 'nullable|string|max:255',
+            'company' => 'nullable|string|max:255',
+            'website' => 'nullable|url',
+            'promotion_description' => 'nullable|string',
+            'payoneer' => 'nullable|string|max:255',
+            'paypal' => 'nullable|email',
+            'binance' => 'nullable|string|max:255',
+            'bank_details' => 'nullable|string',
+            'other_payment_method_description' => 'nullable|string',
+            'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
+            'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
+            'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
+            'sale_hide' => 'nullable|numeric|min:0|max:10',
+            'status' => 'sometimes|in:active,inactive,suspended',
+            'edit_paypal_mail_status' => 'sometimes|in:active,deactive,requested',
+            'edit_payoneer_mail_status' => 'sometimes|in:active,deactive,requested',
+            'edit_bank_details_status' => 'sometimes|in:active,deactive,requested',
+            'edit_binance_mail_status' => 'sometimes|in:active,deactive,requested',
+            'edit_other_payment_method_description_status' => 'sometimes|in:active,deactive,requested',
+            'phone_number' => 'nullable|string|max:20',
+            'telegram_account' => 'nullable|string|max:255',
+            'microsoft_team' => 'nullable|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Check if sale_hide is being changed
+        $oldSaleHide = $affiliate->sale_hide;
+        $newSaleHide = $request->has('sale_hide') ? $request->sale_hide : $oldSaleHide;
+        
+        // Get all fields that should be updated
+        $updateData = $request->only([
+            'first_name',
+            'last_name',
+            'email',
+            'address',
+            'balance',
+            'pay_method',
+            'account_email',
+            'skype',
+            'company',
+            'website',
+            'promotion_description',
+            'payoneer',
+            'paypal',
+            'binance',
+            'bank_details',
+            'other_payment_method_description',
+            'default_affiliate_commission_1',
+            'default_affiliate_commission_2',
+            'default_affiliate_commission_3',
+            'status',
+            'edit_paypal_mail_status',
+            'edit_payoneer_mail_status',
+            'edit_bank_details_status',
+            'edit_binance_mail_status',
+            'edit_other_payment_method_description_status',
+            'phone_number',
+            'telegram_account',
+            'microsoft_team',
+        ]);
+
+        // Handle sale_hide update with cycle tracking
+        if ($request->has('sale_hide') && $oldSaleHide != $newSaleHide) {
+            // Get current total visible sales count
+            $totalVisibleSales = AffiliateSale::where('affiliate_id', $id)
+                ->count();
+            
+            // Update sale_hide and record current visible sales count as cycle start
+            $updateData['sale_hide'] = $newSaleHide;
+            $updateData['sale_hide_cycle'] = $totalVisibleSales;
+            
+        } elseif ($request->has('sale_hide')) {
+            // sale_hide is being set but same value, just update
+            $updateData['sale_hide'] = $newSaleHide;
+        }
+
+        // Only update password if it's provided and not empty
+        if ($request->filled('password')) {
+            $updateData['password'] = Hash::make($request->password);
+        }
+
+        // Remove password_confirmation if it exists
+        unset($updateData['password_confirmation']);
+
+        $affiliate->update($updateData);
+        $affiliate->refresh();
+
         return response()->json([
-            'success' => false,
-            'message' => 'Affiliate not found'
-        ], 404);
+            'success' => true,
+            'message' => 'Affiliate updated successfully',
+            'affiliate' => $affiliate->load('roles'),
+         
+        ]);
     }
-
-    $validator = Validator::make($request->all(), [
-        'first_name' => 'sometimes|string|max:255',
-        'last_name' => 'sometimes|string|max:255',
-        'email' => 'sometimes|email|unique:users,email,' . $id,
-        'password' => 'nullable|string|min:6',
-        'address' => 'nullable|string',
-        'balance' => 'nullable|numeric|min:0',
-        'pay_method' => 'nullable|string|max:255',
-        'account_email' => 'nullable|email',
-        'skype' => 'nullable|string|max:255',
-        'company' => 'nullable|string|max:255',
-        'website' => 'nullable|url',
-        'promotion_description' => 'nullable|string',
-        'payoneer' => 'nullable|string|max:255',
-        'paypal' => 'nullable|email',
-        'binance' => 'nullable|string|max:255',
-        'bank_details' => 'nullable|string',
-        'other_payment_method_description' => 'nullable|string',
-        'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
-        'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
-        'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
-        'sale_hide' => 'nullable|numeric|min:0|max:100',
-        'status' => 'sometimes|in:active,inactive,suspended',
-        'edit_paypal_mail_status' => 'sometimes|in:active,deactive,requested',
-        'edit_payoneer_mail_status' => 'sometimes|in:active,deactive,requested',
-        'edit_bank_details_status' => 'sometimes|in:active,deactive,requested',
-        'edit_binance_mail_status' => 'sometimes|in:active,deactive,requested',
-        'edit_other_payment_method_description_status' => 'sometimes|in:active,deactive,requested',
-        'phone_number' => 'nullable|string|max:20',
-        'telegram_account' => 'nullable|string|max:255',
-        'microsoft_team' => 'nullable|string|max:255',
-    ]);
-
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'errors' => $validator->errors()
-        ], 422);
-    }
-
-    // Get all fields that should be updated
-    $updateData = $request->only([
-        'first_name',
-        'last_name',
-        'email',
-        'address',
-        'balance',
-        'pay_method',
-        'account_email',
-        'skype',
-        'company',
-        'website',
-        'promotion_description',
-        'payoneer',
-        'paypal',
-        'binance',
-        'bank_details',
-        'other_payment_method_description',
-        'default_affiliate_commission_1',
-        'default_affiliate_commission_2',
-        'default_affiliate_commission_3',
-        'sale_hide',
-        'status',
-        'edit_paypal_mail_status',
-        'edit_payoneer_mail_status',
-        'edit_bank_details_status',
-        'edit_binance_mail_status',
-        'edit_other_payment_method_description_status',
-        'phone_number',
-        'telegram_account',
-        'microsoft_team',
-    ]);
-
-    // Only update password if it's provided and not empty
-    if ($request->filled('password')) {
-        $updateData['password'] = Hash::make($request->password);
-    }
-
-    // Remove password_confirmation if it exists (should not be in database)
-    unset($updateData['password_confirmation']);
-
-
-    $affiliate->update($updateData);
-
-    // Refresh the model to get updated data
-    $affiliate->refresh();
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Affiliate updated successfully',
-        'affiliate' => $affiliate->load('roles')
-    ]);
-}
     /**
      * Delete affiliate
      */

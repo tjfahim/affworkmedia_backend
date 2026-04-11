@@ -37,6 +37,7 @@ return new class extends Migration
             // Affiliate Settings
           
             $table->integer('sale_hide')->default(0)->after('paypal');
+             $table->integer('sale_hide_cycle')->default(0)->after('sale_hide');
             
             // Status
             $table->enum('status', ['active', 'inactive', 'suspended'])->default('active')->after('sale_hide');
@@ -69,6 +70,7 @@ return new class extends Migration
                 'account_email', 'skype', 'company', 'website', 'promotion_description',
                 'payoneer', 'paypal', 
                 'sale_hide', 'status',
+                'sale_hide_cycle',
                  'default_affiliate_commission_1',
                 'default_affiliate_commission_2',
                 'default_affiliate_commission_3',

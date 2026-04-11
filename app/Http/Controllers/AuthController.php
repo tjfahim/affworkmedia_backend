@@ -526,7 +526,7 @@ class AuthController extends Controller
             'default_affiliate_commission_1' => 'sometimes|numeric|min:0|max:100',
             'default_affiliate_commission_2' => 'sometimes|numeric|min:0|max:100',
             'default_affiliate_commission_3' => 'sometimes|numeric|min:0|max:100',
-            'sale_hide' => 'sometimes|numeric|min:0|max:100',
+            'sale_hide' => 'sometimes|numeric|min:0|max:10',
             'paypal' => 'nullable|email',
             'payoneer' => 'nullable|string',
             'binance' => 'nullable|string',

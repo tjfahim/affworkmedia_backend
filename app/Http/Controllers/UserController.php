@@ -3,6 +3,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AffiliateSale;
 use App\Models\User;
 use App\Models\Setting;
 use Illuminate\Http\Request;
@@ -74,7 +75,7 @@ class UserController extends Controller
             'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
             'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
             'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
-            'sale_hide' => 'nullable|integer|min:0',
+            'sale_hide' => 'nullable|integer|max:10',
         ]);
 
         if ($validator->fails()) {
@@ -221,7 +222,7 @@ class UserController extends Controller
             'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
             'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
             'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
-            'sale_hide' => 'nullable|integer|min:0',
+            'sale_hide' => 'nullable|integer|max:10',
         ]);
 
         if ($validator->fails()) {
@@ -300,6 +301,24 @@ class UserController extends Controller
             
             $user->syncRoles([$request->role]);
         }
+      // Check if sale_hide is being changed
+        $oldSaleHide = $user->sale_hide;
+        $newSaleHide = $request->has('sale_hide') ? $request->sale_hide : $oldSaleHide;
+        
+        if ($request->has('sale_hide') && $oldSaleHide != $newSaleHide) {
+            // Get current total visible sales count
+            $totalVisibleSales = AffiliateSale::where('affiliate_id', $id)
+                ->count();
+            
+            // Update sale_hide and record current visible sales count as cycle start
+            $updateData['sale_hide'] = $newSaleHide;
+            $updateData['sale_hide_cycle'] = $totalVisibleSales;
+            
+        } elseif ($request->has('sale_hide')) {
+            // sale_hide is being set but same value, just update
+            $updateData['sale_hide'] = $newSaleHide;
+        }
+
 
         return response()->json([
             'success' => true,

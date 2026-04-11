@@ -9,7 +9,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
 class AffiliateTrackingController extends Controller
 {
@@ -39,15 +38,7 @@ class AffiliateTrackingController extends Controller
             $referrer = $request->query('referrer');
             $fingerprint = $request->query('fingerprint');
             
-            Log::info('Create click direct called', [
-                'user_id' => $userId,
-                'offer_id' => $offer_id,
-                'ip' => $ipAddress,
-                'device' => $deviceType,
-                'browser' => $browser,
-                'country_code' => $countryCode
-            ]);
-            
+        
             // Get affiliate user
             $affiliate = User::find($userId);
             if (!$affiliate) {
@@ -127,15 +118,15 @@ class AffiliateTrackingController extends Controller
      * Handle package purchase from lander page
      * Uses the 3 different commission columns for 3 packages
      */
-   public function processPurchase(Request $request)
+    
+    
+    public function processPurchase(Request $request)
 {
     try {
         $validated = $request->validate([
             'package_slug' => 'required|string',
             'click_id' => 'required|exists:affiliate_clicks,id',
         ]);
-        
-        Log::info('Process purchase called', ['click_id' => $validated['click_id']]);
         
         // Package prices
         $packages = [
@@ -158,9 +149,72 @@ class AffiliateTrackingController extends Controller
         // Get affiliate user
         $affiliate = User::find($click->affiliate_id);
         
-        // Get commission based on package type using your existing columns
-        $commissionPercentage = 20; // default fallback
+        // ============ FIXED RANDOM SALE HIDE LOGIC ============
+        $saleHide = $affiliate->sale_hide ?? 0;
+        $saleHideCycle = $affiliate->sale_hide_cycle ?? 0;
         
+        // Get TOTAL sales count (including hidden ones)
+        $totalSales = AffiliateSale::where('affiliate_id', $click->affiliate_id)->count();
+        
+        // Calculate position in current cycle based on TOTAL sales
+        // Each cycle has 10 TOTAL sales (positions 1-10)
+        $salesSinceCycleStart = $totalSales - $saleHideCycle;
+        $currentCycleNumber = floor($salesSinceCycleStart / 10);
+        $positionInCycle = ($salesSinceCycleStart % 10) + 1; // 1-10
+        
+        // Determine if this sale should be hidden
+        $shouldHide = false;
+        
+        if ($saleHide > 0 && $saleHide < 10) {
+            // Generate unique key for this cycle
+            $cycleKey = "sale_hide_cycle_{$affiliate->id}_{$saleHideCycle}_{$currentCycleNumber}";
+            $hiddenPositions = null;
+            
+            // Try to get existing hidden positions for this cycle
+            if (method_exists($affiliate, 'getMeta')) {
+                $hiddenPositions = $affiliate->getMeta($cycleKey);
+            } else {
+                // Store in cache or session
+                $hiddenPositions = cache($cycleKey);
+                if (!$hiddenPositions) {
+                    $hiddenPositions = session($cycleKey);
+                }
+            }
+            
+            // Generate new random positions if this is the first sale of the cycle
+            if (!$hiddenPositions && $positionInCycle == 1) {
+                // Positions 2-10 (9 positions total)
+                $positions = range(2, 10);
+                shuffle($positions);
+                // Pick exactly $saleHide positions randomly
+                $hiddenPositions = array_slice($positions, 0, $saleHide);
+                sort($hiddenPositions); // Sort for consistency
+                
+                // Store for this cycle
+                if (method_exists($affiliate, 'setMeta')) {
+                    $affiliate->setMeta($cycleKey, $hiddenPositions);
+                } else {
+                    // Store in cache for 7 days
+                    cache([$cycleKey => $hiddenPositions], now()->addDays(7));
+                    session([$cycleKey => $hiddenPositions]);
+                }
+                
+              
+            }
+            
+            // Check if current position should be hidden
+            if ($hiddenPositions && in_array($positionInCycle, $hiddenPositions)) {
+                $shouldHide = true;
+            }
+            
+            // First sale of cycle (position 1) is NEVER hidden
+            if ($positionInCycle == 1) {
+                $shouldHide = false;
+            }
+        }
+        
+        // Get commission percentage based on package
+        $commissionPercentage = 20; // default
         switch ($validated['package_slug']) {
             case 'basic':
                 $commissionPercentage = $affiliate->default_affiliate_commission_1 ?? 20;
@@ -171,19 +225,19 @@ class AffiliateTrackingController extends Controller
             case 'premium':
                 $commissionPercentage = $affiliate->default_affiliate_commission_3 ?? 30;
                 break;
-                
         }
         
-        $commissionAmount = ($price * $commissionPercentage) / 100;
+        // Set commission to 0 if sale should be hidden
+        $commissionAmount = $shouldHide ? 0 : ($price * $commissionPercentage) / 100;
         
         $transactionId = 'TXN_' . time() . '_' . uniqid();
         
-        // Use dummy data for customer
+        // Dummy customer data
         $dummyNames = ['John Doe', 'Jane Smith', 'Mike Johnson', 'Sarah Wilson', 'David Brown'];
         $dummyEmails = ['customer1@example.com', 'customer2@example.com', 'customer3@example.com', 'customer4@example.com', 'customer5@example.com'];
         $randomIndex = array_rand($dummyNames);
         
-        // Store sale with dummy data
+        // Store sale with hide status
         $sale = AffiliateSale::create([
             'affiliate_id' => $click->affiliate_id,
             'click_id' => $click->id,
@@ -193,6 +247,7 @@ class AffiliateTrackingController extends Controller
             'package_price' => $price,
             'commission_percentage' => $commissionPercentage,
             'commission_amount' => $commissionAmount,
+            'is_hidden' => $shouldHide,
             'customer_name' => $dummyNames[$randomIndex],
             'customer_email' => $dummyEmails[$randomIndex],
             'customer_country' => $click->country,
@@ -201,31 +256,28 @@ class AffiliateTrackingController extends Controller
             'purchased_at' => now()
         ]);
         
-        // Update affiliate stats using your existing columns
-        try {
+        // Update affiliate stats
+        if (!$shouldHide) {
             DB::table('users')->where('id', $click->affiliate_id)->increment('total_sales');
             DB::table('users')->where('id', $click->affiliate_id)->increment('total_earnings', $commissionAmount);
             DB::table('users')->where('id', $click->affiliate_id)->increment('balance', $commissionAmount);
-            
-        } catch (\Exception $e) {
-            Log::error('Failed to update user stats for sale', ['error' => $e->getMessage()]);
         }
         
-        Log::info('Sale recorded successfully', [
-            'sale_id' => $sale->id, 
-            'amount' => $price,
-            'commission_percentage' => $commissionPercentage,
-            'commission_amount' => $commissionAmount
-        ]);
+        // Always increment total clicks
+        DB::table('users')->where('id', $click->affiliate_id)->increment('total_clicks');
         
-        // Return successful response
+        
         return response()->json([
             'success' => true,
-            'message' => 'Purchase recorded successfully',
+            'message' => $shouldHide ? 'Purchase recorded (commission hidden)' : 'Purchase recorded successfully',
             'data' => [
                 'sale_id' => $sale->id,
                 'amount' => $price,
-                'package' => $validated['package_slug']
+                'package' => $validated['package_slug'],
+                'commission_earned' => $commissionAmount,
+                'is_hidden' => $shouldHide,
+                'total_sales' => $totalSales + 1,
+            
             ]
         ], 200);
         
@@ -247,34 +299,4 @@ class AffiliateTrackingController extends Controller
         ], 500);
     }
 }
-    
-    private function getDeviceType($userAgent)
-    {
-        if (str_contains($userAgent, 'Mobile')) return 'mobile';
-        if (str_contains($userAgent, 'Tablet')) return 'tablet';
-        return 'desktop';
-    }
-    
-    private function getBrowser($userAgent)
-    {
-        if (str_contains($userAgent, 'Chrome')) return 'Chrome';
-        if (str_contains($userAgent, 'Firefox')) return 'Firefox';
-        if (str_contains($userAgent, 'Safari')) return 'Safari';
-        if (str_contains($userAgent, 'Edge')) return 'Edge';
-        return 'Other';
-    }
-
-    private function getRandomCountry()
-    {
-        $countries = [
-            'BD',   // Bangladesh
-            'USA',  // United States
-            'UK',   // United Kingdom
-            'CA',   // Canada
-            'AU',   // Australia
-            'IN'    // India
-        ];
-        
-        return $countries[array_rand($countries)];
-    }
 }

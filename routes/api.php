@@ -67,10 +67,6 @@ Route::get('/reset-db', function () {
 
 
 
-
-
-
-
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
@@ -221,14 +217,9 @@ Route::get('/admin/dashboard', [AffiliateReportController::class, 'adminDashboar
         Route::get('/games/{gameId}/events-with-tracking', [AffiliateOfferController::class, 'getGameEventsWithTracking']);
         Route::get('/events/{eventId}', [AffiliateOfferController::class, 'getEventDetails']);
         Route::post('/generate-tracking-link', [AffiliateOfferController::class, 'generateTrackingLink']);
-
-
-            Route::get('/stats', [AffiliateTrackingController::class, 'getAffiliateStats']);
-
-
-            Route::get('/dashboard',       [AffiliateDashboardController::class, 'index']);
-    Route::get('/dashboard/chart', [AffiliateDashboardController::class, 'chart']);
-
+        Route::get('/stats', [AffiliateTrackingController::class, 'getAffiliateStats']);
+        Route::get('/dashboard',       [AffiliateDashboardController::class, 'index']);
+        Route::get('/dashboard/chart', [AffiliateDashboardController::class, 'chart']);
 
 
     });

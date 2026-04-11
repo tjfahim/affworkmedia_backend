@@ -19,12 +19,15 @@ class CreateAffiliateSalesTable extends Migration
             $table->decimal('package_price', 10, 2);
             $table->decimal('commission_percentage', 5, 2);
             $table->decimal('commission_amount', 10, 2);
+            $table->boolean('is_hidden')->default(false);
+
             $table->string('customer_name')->nullable();
             $table->string('customer_email')->nullable();
             $table->string('customer_country')->nullable();
             $table->string('transaction_id')->unique();
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('completed');
             $table->timestamp('purchased_at');
+
             $table->timestamps();
             
             $table->index(['affiliate_id', 'purchased_at']);
