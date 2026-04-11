@@ -15,6 +15,10 @@ return new class extends Migration
             $table->string('last_name')->after('first_name');
             $table->string('address')->nullable()->after('email');
             
+              $table->string('phone_number')->nullable()->after('address');
+        $table->string('telegram_account')->nullable()->after('phone_number');
+        $table->string('microsoft_team')->nullable()->after('telegram_account');
+        
             // Financial Information
             $table->decimal('balance', 10, 2)->default(0)->after('address');
             $table->string('pay_method')->nullable()->after('balance');
@@ -75,7 +79,10 @@ return new class extends Migration
                 'edit_binance_mail_status',
                 'edit_other_payment_method_description_status',
                 'binance',
-                'other_payment_method_description'
+                'other_payment_method_description',
+                    'phone_number',
+            'telegram_account',
+            'microsoft_team'
             ]);
         });
     }

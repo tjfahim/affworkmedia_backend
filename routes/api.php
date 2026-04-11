@@ -18,6 +18,58 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\TeamManageController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPermissionController;
+use Illuminate\Support\Facades\Artisan;
+
+Route::get('/clear-cache', function () {
+    try {
+        // Clear all caches
+        Artisan::call('config:clear');
+        Artisan::call('cache:clear');
+        Artisan::call('view:clear');
+        Artisan::call('route:clear');
+        
+        // Delete and recreate storage link
+        $publicPath = public_path('storage');
+        if (is_link($publicPath)) {
+            unlink($publicPath);
+        }
+        Artisan::call('storage:link');
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Cache cleared and storage link created successfully!'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ]);
+    }
+});
+
+// Database reset route (migrate fresh with seed)
+Route::get('/reset-db', function () {
+    try {
+        Artisan::call('migrate:fresh', ['--force' => true]);
+        Artisan::call('db:seed', ['--force' => true]);
+        
+        return response()->json([
+            'success' => true,
+            'message' => 'Database refreshed and seeded successfully!'
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Error: ' . $e->getMessage()
+        ]);
+    }
+});
+
+
+
+
+
+
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

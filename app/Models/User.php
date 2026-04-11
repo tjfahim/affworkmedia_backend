@@ -51,6 +51,9 @@ class User extends Authenticatable
         'total_sales',
         'unique_clicks',
         'total_clicks',
+        'phone_number',
+        'telegram_account',
+        'microsoft_team'
     ];
 
     /**

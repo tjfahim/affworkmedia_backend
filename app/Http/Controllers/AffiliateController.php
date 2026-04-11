@@ -70,7 +70,10 @@ class AffiliateController extends Controller
             'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
             'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
             'sale_hide' => 'nullable|numeric|min:0|max:100',
-            'status' => 'sometimes|in:active,inactive,suspended'
+            'status' => 'sometimes|in:active,inactive,suspended',
+            'phone_number' => 'nullable|string|max:20',
+            'telegram_account' => 'nullable|string|max:255',
+            'microsoft_team' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -113,6 +116,9 @@ class AffiliateController extends Controller
             'edit_bank_details_status' => $request->edit_bank_details_status ?? 'deactive',
             'edit_binance_mail_status' => $request->edit_binance_mail_status ?? 'deactive',
             'edit_other_payment_method_description_status' => $request->edit_other_payment_method_description_status ?? 'deactive',
+            'phone_number' => $request->phone_number,
+            'telegram_account' => $request->telegram_account,
+            'microsoft_team' => $request->microsoft_team,
         ]);
 
         // Assign affiliate role
@@ -163,7 +169,7 @@ class AffiliateController extends Controller
         'first_name' => 'sometimes|string|max:255',
         'last_name' => 'sometimes|string|max:255',
         'email' => 'sometimes|email|unique:users,email,' . $id,
-        'password' => 'nullable|string|min:6', // Changed from 'sometimes' to 'nullable'
+        'password' => 'nullable|string|min:6',
         'address' => 'nullable|string',
         'balance' => 'nullable|numeric|min:0',
         'pay_method' => 'nullable|string|max:255',
@@ -187,6 +193,9 @@ class AffiliateController extends Controller
         'edit_bank_details_status' => 'sometimes|in:active,deactive,requested',
         'edit_binance_mail_status' => 'sometimes|in:active,deactive,requested',
         'edit_other_payment_method_description_status' => 'sometimes|in:active,deactive,requested',
+        'phone_number' => 'nullable|string|max:20',
+        'telegram_account' => 'nullable|string|max:255',
+        'microsoft_team' => 'nullable|string|max:255',
     ]);
 
     if ($validator->fails()) {
@@ -196,7 +205,7 @@ class AffiliateController extends Controller
         ], 422);
     }
 
-    // Update affiliate data
+    // Get all fields that should be updated
     $updateData = $request->only([
         'first_name',
         'last_name',
@@ -224,19 +233,24 @@ class AffiliateController extends Controller
         'edit_bank_details_status',
         'edit_binance_mail_status',
         'edit_other_payment_method_description_status',
+        'phone_number',
+        'telegram_account',
+        'microsoft_team',
     ]);
 
-    // Remove null values if not provided
-    $updateData = array_filter($updateData, function($value) {
-        return $value !== null;
-    });
-
     // Only update password if it's provided and not empty
-    if ($request->has('password') && !empty($request->password)) {
+    if ($request->filled('password')) {
         $updateData['password'] = Hash::make($request->password);
     }
 
+    // Remove password_confirmation if it exists (should not be in database)
+    unset($updateData['password_confirmation']);
+
+
     $affiliate->update($updateData);
+
+    // Refresh the model to get updated data
+    $affiliate->refresh();
 
     return response()->json([
         'success' => true,

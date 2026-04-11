@@ -4,6 +4,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Hash;
@@ -34,7 +35,7 @@ class UserController extends Controller
     }
 
     /**
-     * Create a new user (super-admin only)
+     * Create a new user (admin/super-admin only)
      */
     public function store(Request $request)
     {
@@ -47,11 +48,33 @@ class UserController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'password' => 'required|string|min:8',
-            'role' => 'required|string|exists:roles,name',
-            'status' => 'sometimes|in:active,inactive'
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+            'address' => 'nullable|string',
+            'pay_method' => 'nullable|string|in:paypal,payoneer,bank,binance,other',
+            'account_email' => 'nullable|email',
+            'skype' => 'nullable|string|max:255',
+            'skype_account' => 'nullable|string|max:255',
+            'phone_number' => 'nullable|string|max:255',
+            'telegram_account' => 'nullable|string|max:255',
+            'microsoft_team' => 'nullable|string|max:255',
+            'company' => 'nullable|string|max:255',
+            'website' => 'nullable|url',
+            'promotion_description' => 'nullable|string',
+            'payoneer' => 'nullable|string|max:255',
+            'paypal' => 'nullable|email',
+            'binance' => 'nullable|string|max:255',
+            'bank_details' => 'nullable|string',
+            'other_payment_method_description' => 'nullable|string',
+            'role' => 'required|string|in:admin,affiliate',
+            'status' => 'required|in:active,inactive,suspended',
+            'balance' => 'nullable|numeric|min:0',
+            'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
+            'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
+            'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
+            'sale_hide' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -66,11 +89,41 @@ class UserController extends Controller
             ], 403);
         }
 
+        // Get settings for default commission values
+        $settings = Setting::getSettings();
+
         $user = User::create([
-            'name' => $request->name,
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'status' => $request->status ?? 'active'
+            'address' => $request->address,
+            'phone_number' => $request->phone_number,
+            'telegram_account' => $request->telegram_account,
+            'microsoft_team' => $request->microsoft_team,
+            'pay_method' => $request->pay_method,
+            'account_email' => $request->account_email,
+            'skype' => $request->skype ?? $request->skype_account,
+            'company' => $request->company,
+            'website' => $request->website,
+            'promotion_description' => $request->promotion_description,
+            'payoneer' => $request->payoneer,
+            'paypal' => $request->paypal,
+            'binance' => $request->binance,
+            'bank_details' => $request->bank_details,
+            'other_payment_method_description' => $request->other_payment_method_description,
+            'balance' => $request->balance ?? 0,
+            'default_affiliate_commission_1' => $request->default_affiliate_commission_1 ?? ($settings->default_affiliate_commission_1 ?? 70),
+            'default_affiliate_commission_2' => $request->default_affiliate_commission_2 ?? ($settings->default_affiliate_commission_2 ?? 50),
+            'default_affiliate_commission_3' => $request->default_affiliate_commission_3 ?? ($settings->default_affiliate_commission_3 ?? 40),
+            'sale_hide' => $request->sale_hide ?? 3,
+            'status' => $request->status,
+            // Default statuses for payment methods
+            'edit_paypal_mail_status' => 'deactive',
+            'edit_payoneer_mail_status' => 'deactive',
+            'edit_bank_details_status' => 'deactive',
+            'edit_binance_mail_status' => 'deactive',
+            'edit_other_payment_method_description_status' => 'deactive',
         ]);
 
         // Assign role
@@ -142,11 +195,33 @@ class UserController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
+            'first_name' => 'sometimes|string|max:255',
+            'last_name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:users,email,' . $id,
-            'password' => 'sometimes|string|min:8',
+            'password' => 'sometimes|string|min:8|confirmed',
+            'address' => 'nullable|string',
+            'pay_method' => 'nullable|string|in:paypal,payoneer,bank,binance,other',
+            'account_email' => 'nullable|email',
+            'skype' => 'nullable|string|max:255',
+            'skype_account' => 'nullable|string|max:255',
+            'phone_number' => 'nullable|string|max:255',
+            'telegram_account' => 'nullable|string|max:255',
+            'microsoft_team' => 'nullable|string|max:255',
+            'company' => 'nullable|string|max:255',
+            'website' => 'nullable|url',
+            'promotion_description' => 'nullable|string',
+            'payoneer' => 'nullable|string|max:255',
+            'paypal' => 'nullable|email',
+            'binance' => 'nullable|string|max:255',
+            'bank_details' => 'nullable|string',
+            'other_payment_method_description' => 'nullable|string',
             'role' => 'sometimes|string|exists:roles,name',
-            'status' => 'sometimes|in:active,inactive'
+            'status' => 'sometimes|in:active,inactive,suspended',
+            'balance' => 'nullable|numeric|min:0',
+            'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
+            'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
+            'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
+            'sale_hide' => 'nullable|integer|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -154,15 +229,44 @@ class UserController extends Controller
         }
 
         // Update user data
-        if ($request->has('name')) {
-            $user->name = $request->name;
+        $updateData = $request->only([
+            'first_name',
+            'last_name',
+            'address',
+            'pay_method',
+            'account_email',
+            'skype',
+            'phone_number',
+            'telegram_account',
+            'microsoft_team',
+            'company',
+            'website',
+            'promotion_description',
+            'payoneer',
+            'paypal',
+            'binance',
+            'bank_details',
+            'other_payment_method_description',
+            'balance',
+            'default_affiliate_commission_1',
+            'default_affiliate_commission_2',
+            'default_affiliate_commission_3',
+            'sale_hide',
+        ]);
+
+        // Handle skype_account field (support both field names)
+        if ($request->has('skype_account') && !$request->has('skype')) {
+            $updateData['skype'] = $request->skype_account;
         }
+
         if ($request->has('email')) {
-            $user->email = $request->email;
+            $updateData['email'] = $request->email;
         }
-        if ($request->has('password')) {
-            $user->password = Hash::make($request->password);
+
+        if ($request->has('password') && !empty($request->password)) {
+            $updateData['password'] = Hash::make($request->password);
         }
+
         if ($request->has('status')) {
             // Only super-admin can change status
             if (!$request->user()->hasRole('super-admin')) {
@@ -171,10 +275,10 @@ class UserController extends Controller
                     'message' => 'Only super-admin can change user status'
                 ], 403);
             }
-            $user->status = $request->status;
+            $updateData['status'] = $request->status;
         }
 
-        $user->save();
+        $user->update($updateData);
 
         // Update role if provided
         if ($request->has('role')) {
@@ -200,6 +304,47 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User updated successfully',
+            'user' => $user->fresh()->load('roles', 'permissions')
+        ]);
+    }
+
+    /**
+     * Toggle user status (activate/deactivate)
+     */
+    public function toggleStatus(Request $request, $id)
+    {
+        // Only super-admin and admin can toggle status
+        if (!$request->user()->hasPermissionTo('edit users')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized to change user status'
+            ], 403);
+        }
+
+        $user = User::find($id);
+        
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        // Prevent toggling super-admin status
+        if ($user->hasRole('super-admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot change super-admin user status'
+            ], 403);
+        }
+
+        $newStatus = $user->status === 'active' ? 'inactive' : 'active';
+        $user->status = $newStatus;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "User status changed to {$newStatus}",
             'user' => $user->load('roles', 'permissions')
         ]);
     }
@@ -247,6 +392,28 @@ class UserController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User deleted successfully'
+        ]);
+    }
+
+    /**
+     * Get all available roles (for dropdown)
+     */
+    public function getRoles(Request $request)
+    {
+        // Only admin/super-admin can access
+        if (!$request->user()->hasPermissionTo('view users')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        // Exclude super-admin role from being assignable
+        $roles = Role::where('name', '!=', 'super-admin')->get();
+        
+        return response()->json([
+            'success' => true,
+            'roles' => $roles
         ]);
     }
 }

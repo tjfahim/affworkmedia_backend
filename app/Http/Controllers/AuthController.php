@@ -27,6 +27,9 @@ class AuthController extends Controller
             'pay_method' => 'nullable|string|in:paypal,payoneer,bank',
             'account_email' => 'nullable|email',
             'skype' => 'nullable|string|max:255',
+            'phone_number' => 'nullable|string|max:255',
+            'telegram_account' => 'nullable|string|max:255',
+            'microsoft_team' => 'nullable|string|max:255',
             'company' => 'nullable|string|max:255',
             'website' => 'nullable|url',
             'promotion_description' => 'nullable|string',
@@ -50,6 +53,9 @@ class AuthController extends Controller
         'email' => $request->email,
         'password' => Hash::make($request->password),
         'address' => $request->address,
+        'phone_number' => $request->phone_number,
+        'telegram_account' => $request->telegram_account,
+        'microsoft_team' => $request->microsoft_team,
         'pay_method' => $request->pay_method,
         'account_email' => $request->account_email,
         'skype' => $request->skype,
@@ -62,9 +68,9 @@ class AuthController extends Controller
         'bank_details' => $request->bank_details,
         'other_payment_method_description' => $request->other_payment_method_description,
         'balance' => 0,
-        'default_affiliate_commission_1' => $settings->default_affiliate_commission_1 ?? 0,
-        'default_affiliate_commission_2' => $settings->default_affiliate_commission_2 ?? 0,
-        'default_affiliate_commission_3' => $settings->default_affiliate_commission_3 ?? 0,
+        'default_affiliate_commission_1' => $settings->default_affiliate_commission_1 ?? 70,
+        'default_affiliate_commission_2' => $settings->default_affiliate_commission_2 ?? 50,
+        'default_affiliate_commission_3' => $settings->default_affiliate_commission_3 ?? 40,
     
         'sale_hide' => 3,
         'status' => 'inactive',
@@ -222,6 +228,10 @@ class AuthController extends Controller
             'binance' => 'nullable|string|max:255',
             'bank_details' => 'nullable|string',
             'other_payment_method_description' => 'nullable|string',
+            'phone_number' => 'nullable|string|max:255',
+            'telegram_account' => 'nullable|string|max:255',
+            'microsoft_team' => 'nullable|string|max:255'
+
         ]);
 
         if ($validator->fails()) {
@@ -243,6 +253,9 @@ class AuthController extends Controller
             'binance',
             'bank_details',
             'other_payment_method_description',
+            'phone_number',
+            'telegram_account',
+            'microsoft_team'
         ]));
 
         return response()->json([
