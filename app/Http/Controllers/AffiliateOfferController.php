@@ -31,44 +31,74 @@ class AffiliateOfferController extends Controller
         }
     }
 
-    public function getGameEvents(Request $request, $gameId)
-    {
-        try {
-            $game = GameManage::where('id', $gameId)->active()->first();
-            
-            if (!$game) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Game not found or inactive'
-                ], 404);
-            }
-            
-            $events = EventManage::with(['firstTeam', 'secondTeam', 'game'])
-                ->where('game_manage_id', $gameId)
-                ->orderBy('start_datetime', 'asc')
-                ->get();
-            
-            $groupedEvents = [
-                'running' => $events->where('status', 'running')->values(),
-                'upcoming' => $events->where('status', 'upcoming')->values(),
-                'finished' => $events->where('status', 'finished')->values()
-            ];
-            
-            return response()->json([
-                'success' => true,
-                'game' => $game,
-                'events' => $events,
-                'grouped_events' => $groupedEvents,
-                'total_events' => $events->count(),
-                'message' => 'Events retrieved successfully'
-            ], 200);
-        } catch (\Exception $e) {
+    
+public function getGameEvents(Request $request, $gameId)
+{
+    try {
+        $game = GameManage::where('id', $gameId)->active()->first();
+        
+        if (!$game) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve events: ' . $e->getMessage()
-            ], 500);
+                'message' => 'Game not found or inactive'
+            ], 404);
         }
+        
+        // Get all events for the game
+        $events = EventManage::with(['firstTeam', 'secondTeam', 'game'])
+            ->where('game_manage_id', $gameId)
+            ->get()
+            ->map(function ($event) {
+                // Compute status based on dates
+                $now = now();
+                $start = $event->start_datetime ? new \DateTime($event->start_datetime) : null;
+                $end = $event->end_datetime ? new \DateTime($event->end_datetime) : null;
+                
+                if (!$start) {
+                    $status = 'upcoming';
+                } elseif ($now < $start) {
+                    $status = 'upcoming';
+                } elseif ($end && $now > $end) {
+                    $status = 'expired';
+                } else {
+                    $status = 'running';
+                }
+                
+                $event->status = $status;
+                return $event;
+            })
+            ->sortBy('start_datetime')
+            ->values();
+        
+        // Group events by status
+        $groupedEvents = [
+            'running' => $events->where('status', 'running')->values(),
+            'upcoming' => $events->where('status', 'upcoming')->values(),
+            'expired' => $events->where('status', 'expired')->values()
+        ];
+        
+        // Get affiliate info (assuming authenticated affiliate)
+        $affiliate = auth()->user();
+        $landerpageDomain = $affiliate->landerpage_domain ?? config('app.default_landerpage_domain');
+        
+        return response()->json([
+            'success' => true,
+            'game' => $game,
+            'events' => $events,
+            'grouped_events' => $groupedEvents,
+            'total_events' => $events->count(),
+            'affiliate_id' => $affiliate->id,
+            'landerpage_domain' => $landerpageDomain,
+            'message' => 'Events retrieved successfully'
+        ], 200);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to retrieve events: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     public function getGameEventsWithTracking(Request $request, $gameId)
     {

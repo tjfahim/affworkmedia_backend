@@ -20,6 +20,7 @@ class TeamManage extends Model
         'name',
         'slug',
         'image',
+        'game_id',
         'status',
     ];
 
@@ -30,6 +31,7 @@ class TeamManage extends Model
      */
     protected $casts = [
         'status' => 'boolean',
+        'game_id' => 'integer',
     ];
 
     /**
@@ -66,5 +68,10 @@ class TeamManage extends Model
     public function scopeActive($query)
     {
         return $query->where('status', true);
+    }
+
+       public function game()
+    {
+        return $this->belongsTo(GameManage::class, 'game_id');
     }
 }

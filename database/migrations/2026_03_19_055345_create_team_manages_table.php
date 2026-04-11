@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('slug')->unique();
             $table->string('image')->nullable();
+             $table->foreignId('game_id')->nullable()->constrained('game_manages')->onDelete('set null');
             $table->boolean('status')->default(true);
             $table->timestamps();
         });

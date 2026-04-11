@@ -4,6 +4,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TeamManage;
+use App\Models\GameManage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
@@ -16,7 +17,7 @@ class TeamManageController extends Controller
      */
     public function index()
     {
-        $teams = TeamManage::latest()->get();
+        $teams = TeamManage::with('game')->latest()->get();
         
         return response()->json([
             'success' => true,
@@ -31,6 +32,7 @@ class TeamManageController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
+            'game_id' => 'nullable|exists:game_manages,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'status' => 'boolean'
         ]);
@@ -45,6 +47,7 @@ class TeamManageController extends Controller
         $data = [
             'name' => $request->name,
             'slug' => Str::slug($request->name),
+            'game_id' => $request->game_id,
             'status' => $request->status ?? true
         ];
 
@@ -61,7 +64,7 @@ class TeamManageController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Team member created successfully',
-            'team' => $team
+            'team' => $team->load('game')
         ], 201);
     }
 
@@ -70,7 +73,7 @@ class TeamManageController extends Controller
      */
     public function show($id)
     {
-        $team = TeamManage::find($id);
+        $team = TeamManage::with('game')->find($id);
 
         if (!$team) {
             return response()->json([
@@ -101,6 +104,7 @@ class TeamManageController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|string|max:255',
+            'game_id' => 'nullable|exists:game_manages,id',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'status' => 'sometimes|boolean'
         ]);
@@ -117,6 +121,10 @@ class TeamManageController extends Controller
         if ($request->has('name')) {
             $data['name'] = $request->name;
             $data['slug'] = Str::slug($request->name);
+        }
+
+        if ($request->has('game_id')) {
+            $data['game_id'] = $request->game_id;
         }
 
         if ($request->has('status')) {
@@ -141,7 +149,7 @@ class TeamManageController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Team member updated successfully',
-            'team' => $team
+            'team' => $team->fresh('game')
         ]);
     }
 
@@ -193,6 +201,39 @@ class TeamManageController extends Controller
             'success' => true,
             'message' => 'Team member status updated successfully',
             'status' => $team->status
+        ]);
+    }
+
+    /**
+     * Get teams by game.
+     */
+    public function getTeamsByGame($gameId)
+    {
+        $teams = TeamManage::with('game')
+            ->where('game_id', $gameId)
+            ->where('status', true)
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'teams' => $teams
+        ]);
+    }
+
+    /**
+     * Get active teams with their game information.
+     */
+    public function getActiveTeams()
+    {
+        $teams = TeamManage::with('game')
+            ->where('status', true)
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'teams' => $teams
         ]);
     }
 }
