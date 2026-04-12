@@ -7,6 +7,7 @@ use App\Http\Controllers\AffiliateOfferController;
 use App\Http\Controllers\AffiliatePaymentController;
 use App\Http\Controllers\AffiliateReportController;
 use App\Http\Controllers\AffiliateTrackingController;
+use App\Http\Controllers\AffiliateUserReportController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DomainRedirectController;
@@ -220,7 +221,8 @@ Route::get('/admin/dashboard', [AffiliateReportController::class, 'adminDashboar
         Route::get('/stats', [AffiliateTrackingController::class, 'getAffiliateStats']);
         Route::get('/dashboard',       [AffiliateDashboardController::class, 'index']);
         Route::get('/dashboard/chart', [AffiliateDashboardController::class, 'chart']);
-
+     Route::get('/reports/games', [AffiliateUserReportController::class, 'gamesReport']);
+    Route::get('/reports/conversions', [AffiliateUserReportController::class, 'conversionsReport']);
 
     });
 

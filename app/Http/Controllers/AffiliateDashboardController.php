@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+
 class AffiliateDashboardController extends Controller
 {
     /**
@@ -87,7 +88,9 @@ class AffiliateDashboardController extends Controller
                 ->selectRaw('COUNT(*) as total, SUM(is_unique) as unique_count')
                 ->first();
 
+            // FIXED: Only count visible sales (is_hidden = false)
             $sales = AffiliateSale::where('affiliate_id', $uid)
+                ->where('is_hidden', false)
                 ->whereBetween('purchased_at', [$start, $end])
                 ->selectRaw('COUNT(*) as total_sales, SUM(commission_amount) as profit')
                 ->first();
@@ -125,7 +128,9 @@ class AffiliateDashboardController extends Controller
             ->get()
             ->keyBy('country');
 
+        // FIXED: Only count visible sales (is_hidden = false)
         $sales = AffiliateSale::where('affiliate_id', $uid)
+            ->where('is_hidden', false)
             ->whereNotNull('customer_country')
             ->select(
                 'customer_country as country',
@@ -159,143 +164,160 @@ class AffiliateDashboardController extends Controller
     }
 
     /** Top performing games with sub breakdown */
- private function topGames(int $uid): array
-{
-    // Game-level clicks
-    $gameClicks = AffiliateClick::where('affiliate_id', $uid)
-        ->whereNotNull('game_id')
-        ->select(
-            'game_id',
-            DB::raw('COUNT(*) as total_clicks'),
-            DB::raw('SUM(is_unique) as unique_clicks')
-        )
-        ->groupBy('game_id')
-        ->orderByDesc('total_clicks')
-        ->limit(10)
-        ->get()
-        ->keyBy('game_id');
+    private function topGames(int $uid): array
+    {
+        // Game-level clicks
+        $gameClicks = AffiliateClick::where('affiliate_id', $uid)
+            ->whereNotNull('game_id')
+            ->select(
+                'game_id',
+                DB::raw('COUNT(*) as total_clicks'),
+                DB::raw('SUM(is_unique) as unique_clicks')
+            )
+            ->groupBy('game_id')
+            ->orderByDesc('total_clicks')
+            ->limit(10)
+            ->get()
+            ->keyBy('game_id');
 
-    $gameIds = $gameClicks->keys();
+        $gameIds = $gameClicks->keys();
 
-    $gameSales = AffiliateSale::where('affiliate_id', $uid)
-        ->whereIn('game_id', $gameIds)
-        ->select(
-            'game_id',
-            DB::raw('COUNT(*) as conversions'),
-            DB::raw('SUM(commission_amount) as profit')
-        )
-        ->groupBy('game_id')
-        ->get()
-        ->keyBy('game_id');
+        // FIXED: Only count visible sales (is_hidden = false)
+        $gameSales = AffiliateSale::where('affiliate_id', $uid)
+            ->where('is_hidden', false)
+            ->whereIn('game_id', $gameIds)
+            ->select(
+                'game_id',
+                DB::raw('COUNT(*) as conversions'),
+                DB::raw('SUM(commission_amount) as profit')
+            )
+            ->groupBy('game_id')
+            ->get()
+            ->keyBy('game_id');
 
-    // Sub-level breakdown per game
-    $subClicks = AffiliateClick::where('affiliate_id', $uid)
-        ->whereIn('game_id', $gameIds)
-        ->select(
-            'game_id', 'sub1', 'sub2',
-            DB::raw('COUNT(*) as total_clicks'),
-            DB::raw('SUM(is_unique) as unique_clicks')
-        )
-        ->groupBy('game_id', 'sub1', 'sub2')
-        ->get();
+        // Sub-level breakdown per game
+        $subClicks = AffiliateClick::where('affiliate_id', $uid)
+            ->whereIn('game_id', $gameIds)
+            ->select(
+                'game_id', 'sub1', 'sub2',
+                DB::raw('COUNT(*) as total_clicks'),
+                DB::raw('SUM(is_unique) as unique_clicks')
+            )
+            ->groupBy('game_id', 'sub1', 'sub2')
+            ->get();
 
-    // FIXED: Specify which table's affiliate_id to use
-    $subSales = AffiliateSale::where('affiliate_sales.affiliate_id', $uid)  // Changed here
-        ->join('affiliate_clicks', 'affiliate_sales.click_id', '=', 'affiliate_clicks.id')
-        ->whereIn('affiliate_sales.game_id', $gameIds)
-        ->select(
-            'affiliate_sales.game_id',
-            'affiliate_clicks.sub1',
-            'affiliate_clicks.sub2',
-            DB::raw('COUNT(*) as conversions'),
-            DB::raw('SUM(affiliate_sales.commission_amount) as profit')
-        )
-        ->groupBy('affiliate_sales.game_id', 'affiliate_clicks.sub1', 'affiliate_clicks.sub2')
-        ->get();
+        // FIXED: Only count visible sales (is_hidden = false)
+        $subSales = AffiliateSale::where('affiliate_sales.affiliate_id', $uid)
+            ->where('affiliate_sales.is_hidden', false)
+            ->join('affiliate_clicks', 'affiliate_sales.click_id', '=', 'affiliate_clicks.id')
+            ->whereIn('affiliate_sales.game_id', $gameIds)
+            ->select(
+                'affiliate_sales.game_id',
+                'affiliate_clicks.sub1',
+                'affiliate_clicks.sub2',
+                DB::raw('COUNT(*) as conversions'),
+                DB::raw('SUM(affiliate_sales.commission_amount) as profit')
+            )
+            ->groupBy('affiliate_sales.game_id', 'affiliate_clicks.sub1', 'affiliate_clicks.sub2')
+            ->get();
 
-    // Load game names
-    $games = \App\Models\GameManage::whereIn('id', $gameIds)->pluck('name', 'id');
+        // Load game names
+        $games = \App\Models\GameManage::whereIn('id', $gameIds)->pluck('name', 'id');
 
-    $result = [];
+        $result = [];
 
-    foreach ($gameClicks as $gameId => $gc) {
-        $gs          = $gameSales->get($gameId);
-        $totalClicks = (int) $gc->total_clicks;
-        $conversions = (int) ($gs->conversions ?? 0);
+        foreach ($gameClicks as $gameId => $gc) {
+            $gs          = $gameSales->get($gameId);
+            $totalClicks = (int) $gc->total_clicks;
+            $conversions = (int) ($gs->conversions ?? 0);
 
-        // Build subs
-        $subs = [];
-        $gameSubClicks = $subClicks->where('game_id', $gameId);
-        $gameSubSales  = $subSales->where('game_id', $gameId)->keyBy(fn($r) => $r->sub1 . '|' . $r->sub2);
+            // Build subs
+            $subs = [];
+            $gameSubClicks = $subClicks->where('game_id', $gameId);
+            $gameSubSales  = $subSales->where('game_id', $gameId)->keyBy(fn($r) => $r->sub1 . '|' . $r->sub2);
 
-        foreach ($gameSubClicks as $sc) {
-            $key = $sc->sub1 . '|' . $sc->sub2;
-            $ss  = $gameSubSales->get($key);
-            $sc_clicks = (int) $sc->total_clicks;
-            $sc_conv   = (int) ($ss->conversions ?? 0);
+            foreach ($gameSubClicks as $sc) {
+                $key = $sc->sub1 . '|' . $sc->sub2;
+                $ss  = $gameSubSales->get($key);
+                $sc_clicks = (int) $sc->total_clicks;
+                $sc_conv   = (int) ($ss->conversions ?? 0);
 
-            $label = collect([$sc->sub1, $sc->sub2])->filter()->join(' / ');
-            if (!$label) continue; // skip rows with no subs
+                $label = collect([$sc->sub1, $sc->sub2])->filter()->join(' / ');
+                if (!$label) continue;
 
-            $subs[] = [
-                'sub1'        => $sc->sub1,
-                'sub2'        => $sc->sub2,
-                'label'       => $label,
-                'clicks'      => $sc_clicks,
-                'unique'      => (int) $sc->unique_clicks,
-                'conversions' => $sc_conv,
-                'profit'      => (float) ($ss->profit ?? 0),
-                'cr'          => $sc_clicks > 0 ? round(($sc_conv / $sc_clicks) * 100, 2) : 0,
+                $subs[] = [
+                    'sub1'        => $sc->sub1,
+                    'sub2'        => $sc->sub2,
+                    'label'       => $label,
+                    'clicks'      => $sc_clicks,
+                    'unique'      => (int) $sc->unique_clicks,
+                    'conversions' => $sc_conv,
+                    'profit'      => (float) ($ss->profit ?? 0),
+                    'cr'          => $sc_clicks > 0 ? round(($sc_conv / $sc_clicks) * 100, 2) : 0,
+                ];
+            }
+
+            $result[] = [
+                'game_id'     => $gameId,
+                'game_name'   => $games->get($gameId, 'Unknown'),
+                'clicks'      => $totalClicks,
+                'unique'      => (int) $gc->unique_clicks,
+                'conversions' => $conversions,
+                'profit'      => (float) ($gs->profit ?? 0),
+                'cr'          => $totalClicks > 0 ? round(($conversions / $totalClicks) * 100, 2) : 0,
+                'subs'        => $subs,
             ];
         }
 
-        $result[] = [
-            'game_id'     => $gameId,
-            'game_name'   => $games->get($gameId, 'Unknown'),
-            'clicks'      => $totalClicks,
-            'unique'      => (int) $gc->unique_clicks,
-            'conversions' => $conversions,
-            'profit'      => (float) ($gs->profit ?? 0),
-            'cr'          => $totalClicks > 0 ? round(($conversions / $totalClicks) * 100, 2) : 0,
-            'subs'        => $subs,
-        ];
+        return $result;
     }
 
-    return $result;
-}
-    /** Device breakdown — last 7 days */
     private function deviceBreakdown(int $uid): array
     {
-        return AffiliateClick::where('affiliate_id', $uid)
+        $devices = AffiliateClick::where('affiliate_id', $uid)
             ->where('created_at', '>=', Carbon::now()->subDays(7))
             ->whereNotNull('device_type')
             ->select('device_type', DB::raw('COUNT(*) as count'))
             ->groupBy('device_type')
             ->orderByDesc('count')
-            ->get()
-            ->map(fn($r) => ['label' => $r->device_type, 'value' => (int) $r->count])
-            ->toArray();
+            ->get();
+        
+        $total = $devices->sum('count');
+        
+        return $devices->map(fn($r) => [
+            'label' => $r->device_type, 
+            'value' => (int) $r->count,
+            'percentage' => $total > 0 ? round(($r->count / $total) * 100, 1) : 0
+        ])->toArray();
     }
 
-    /** OS / browser breakdown — last 7 days (using browser column as OS proxy) */
+    /** OS / browser breakdown — last 7 days with percentages */
     private function osBreakdown(int $uid): array
     {
-        return AffiliateClick::where('affiliate_id', $uid)
+        $browsers = AffiliateClick::where('affiliate_id', $uid)
             ->where('created_at', '>=', Carbon::now()->subDays(7))
             ->whereNotNull('browser')
             ->select('browser', DB::raw('COUNT(*) as count'))
             ->groupBy('browser')
             ->orderByDesc('count')
-            ->get()
-            ->map(fn($r) => ['label' => $r->browser, 'value' => (int) $r->count])
-            ->toArray();
+            ->get();
+        
+        $total = $browsers->sum('count');
+        
+        return $browsers->map(fn($r) => [
+            'label' => $r->browser, 
+            'value' => (int) $r->count,
+            'percentage' => $total > 0 ? round(($r->count / $total) * 100, 1) : 0
+        ])->toArray();
     }
 
     /** Best day / week / month + daily averages */
     private function performanceInsights(int $uid): array
     {
+        // FIXED: Only count visible sales (is_hidden = false)
         // Best day
         $bestDay = AffiliateSale::where('affiliate_id', $uid)
+            ->where('is_hidden', false)
             ->select(
                 DB::raw('DATE(purchased_at) as period'),
                 DB::raw('SUM(commission_amount) as profit'),
@@ -307,6 +329,7 @@ class AffiliateDashboardController extends Controller
 
         // Best week
         $bestWeek = AffiliateSale::where('affiliate_id', $uid)
+            ->where('is_hidden', false)
             ->select(
                 DB::raw('YEARWEEK(purchased_at, 1) as period'),
                 DB::raw('SUM(commission_amount) as profit'),
@@ -318,6 +341,7 @@ class AffiliateDashboardController extends Controller
 
         // Best month
         $bestMonth = AffiliateSale::where('affiliate_id', $uid)
+            ->where('is_hidden', false)
             ->select(
                 DB::raw('DATE_FORMAT(purchased_at, "%Y-%m") as period'),
                 DB::raw('SUM(commission_amount) as profit'),
@@ -340,7 +364,7 @@ class AffiliateDashboardController extends Controller
             $monthLabel = Carbon::createFromFormat('Y-m', $bestMonth->period)->format('F Y');
         }
 
-        // Daily averages (last 90 days)
+        // Daily averages (last 90 days) - FIXED: Only count visible sales
         $daysWithClicks = AffiliateClick::where('affiliate_id', $uid)
             ->where('created_at', '>=', Carbon::now()->subDays(90))
             ->selectRaw('DATE(created_at) as d, COUNT(*) as c')
@@ -348,6 +372,7 @@ class AffiliateDashboardController extends Controller
             ->get();
 
         $daysWithSales = AffiliateSale::where('affiliate_id', $uid)
+            ->where('is_hidden', false)
             ->where('purchased_at', '>=', Carbon::now()->subDays(90))
             ->selectRaw('DATE(purchased_at) as d, COUNT(*) as conversions, SUM(commission_amount) as profit')
             ->groupBy('d')
@@ -394,7 +419,9 @@ class AffiliateDashboardController extends Controller
                     ->selectRaw('YEARWEEK(created_at, 1) as period, COUNT(*) as clicks, SUM(is_unique) as unique_clicks')
                     ->groupBy('period')->orderBy('period')->get();
 
+                // FIXED: Only count visible sales (is_hidden = false)
                 $salesRaw = AffiliateSale::where('affiliate_id', $uid)
+                    ->where('is_hidden', false)
                     ->where('purchased_at', '>=', $start)
                     ->selectRaw('YEARWEEK(purchased_at, 1) as period, COUNT(*) as conversions, SUM(commission_amount) as profit')
                     ->groupBy('period')->orderBy('period')->get()->keyBy('period');
@@ -420,7 +447,9 @@ class AffiliateDashboardController extends Controller
                     ->selectRaw('DATE_FORMAT(created_at, "%Y-%m") as period, COUNT(*) as clicks, SUM(is_unique) as unique_clicks')
                     ->groupBy('period')->orderBy('period')->get();
 
+                // FIXED: Only count visible sales (is_hidden = false)
                 $salesRaw = AffiliateSale::where('affiliate_id', $uid)
+                    ->where('is_hidden', false)
                     ->where('purchased_at', '>=', Carbon::now()->subMonths(12))
                     ->selectRaw('DATE_FORMAT(purchased_at, "%Y-%m") as period, COUNT(*) as conversions, SUM(commission_amount) as profit')
                     ->groupBy('period')->orderBy('period')->get()->keyBy('period');
@@ -445,7 +474,9 @@ class AffiliateDashboardController extends Controller
                     ->selectRaw('DATE(created_at) as period, COUNT(*) as clicks, SUM(is_unique) as unique_clicks')
                     ->groupBy('period')->orderBy('period')->get();
 
+                // FIXED: Only count visible sales (is_hidden = false)
                 $salesRaw = AffiliateSale::where('affiliate_id', $uid)
+                    ->where('is_hidden', false)
                     ->where('purchased_at', '>=', $start)
                     ->selectRaw('DATE(purchased_at) as period, COUNT(*) as conversions, SUM(commission_amount) as profit')
                     ->groupBy('period')->orderBy('period')->get()->keyBy('period');
