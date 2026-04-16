@@ -18,7 +18,7 @@ class UsersTableSeeder extends Seeder
             'email' => 'superadmin@superadmin.com',
             'password' => Hash::make('superadmin@superadmin.com'),
             'address' => '123 Admin Street, NY',
-            'balance' => 10000,
+            'balance' => 0,
             'pay_method' => 'bank',
             'account_email' => 'superadmin@superadmin.com',
             'skype' => 'superadmin.skype',
@@ -39,7 +39,7 @@ class UsersTableSeeder extends Seeder
             'email' => 'admin@admin.com',
             'password' => Hash::make('admin@admin.com'),
             'address' => '456 Admin Avenue, LA',
-            'balance' => 5000,
+            'balance' => 0,
             'pay_method' => 'paypal',
             'account_email' => 'admin@admin.com',
             'skype' => 'admin.skype',
@@ -60,7 +60,7 @@ class UsersTableSeeder extends Seeder
             'email' => 'sarah@sarah.com',
             'password' => Hash::make('sarah@sarah.com'),
             'address' => '789 Marketing Blvd, Chicago',
-            'balance' => 1250.50,
+            'balance' => 0,
             'pay_method' => 'paypal',
             'account_email' => 'sarah.payments@sarah.com',
             'skype' => 'sarah.affiliate',
@@ -74,48 +74,7 @@ class UsersTableSeeder extends Seeder
         ]);
         $affiliate1->assignRole('affiliate');
 
-        // Create Affiliate User 2
-        $affiliate2 = User::create([
-            'first_name' => 'Mike',
-            'last_name' => 'Chen',
-            'email' => 'mike@mike.com',
-            'password' => Hash::make('mike@mike.com'),
-            'address' => '321 Digital Way, SF',
-            'balance' => 3450.75,
-            'pay_method' => 'payoneer',
-            'account_email' => 'mike.chen@mike.com',
-            'skype' => 'mike.chen.aff',
-            'company' => 'Chen Digital Solutions',
-            'website' => 'https://chendigital.com',
-            'promotion_description' => 'Tech reviewer and affiliate marketer for software products',
-            'payoneer' => 'mike@payoneer.com',
-            'paypal' => 'mike@paypal.com',
-            'sale_hide' => 3,
-            'status' => 'active',
-        ]);
-        $affiliate2->assignRole('affiliate');
-
-        // Create Affiliate User 3 (inactive)
-        $affiliate3 = User::create([
-            'first_name' => 'Emma',
-            'last_name' => 'Wilson',
-            'email' => 'emma@emma.com',
-            'password' => Hash::make('emma@emma.com'),
-            'address' => '555 Marketing Ave, Austin',
-            'balance' => 0,
-            'pay_method' => 'paypal',
-            'account_email' => 'emma.wilson@emma.com',
-            'skype' => 'emma.wilson',
-            'company' => 'Wilson Promotions',
-            'website' => 'https://wilsonpromo.com',
-            'promotion_description' => 'Social media influencer and affiliate marketer',
-            'payoneer' => 'emma@payoneer.com',
-            'paypal' => 'emma@paypal.com',
-            'sale_hide' => 3,
-            'status' => 'inactive',
-        ]);
-        $affiliate3->assignRole('affiliate');
-
+      
         $this->command->info('Users created successfully!');
         $this->command->info('Super Admin: superadmin@superadmin.com / superadmin@superadmin.com');
         $this->command->info('Admin: admin@admin.com / admin@admin.com');

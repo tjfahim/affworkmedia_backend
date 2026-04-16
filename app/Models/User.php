@@ -93,6 +93,7 @@ class User extends Authenticatable
     {
         return "{$this->first_name} {$this->last_name}";
     }
+    
 
     // Scopes
     public function scopeActive($query)

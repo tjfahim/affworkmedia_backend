@@ -50,11 +50,11 @@ return new class extends Migration
             $table->text('bank_details')->nullable()->after('default_affiliate_commission_3');
             
             // Payment Method Statuses
-            $table->enum('edit_paypal_mail_status', ['active', 'deactive', 'requested'])->default('deactive')->after('bank_details');
-            $table->enum('edit_payoneer_mail_status', ['active', 'deactive', 'requested'])->default('deactive')->after('edit_paypal_mail_status');
-            $table->enum('edit_bank_details_status', ['active', 'deactive', 'requested'])->default('deactive')->after('edit_payoneer_mail_status');
-            $table->enum('edit_binance_mail_status', ['active', 'deactive', 'requested'])->default('deactive')->after('edit_bank_details_status');
-            $table->enum('edit_other_payment_method_description_status', ['active', 'deactive', 'requested'])->default('deactive')->after('edit_binance_mail_status');
+            $table->enum('edit_paypal_mail_status', ['active', 'deactive', 'requested'])->default('active')->after('bank_details');
+            $table->enum('edit_payoneer_mail_status', ['active', 'deactive', 'requested'])->default('active')->after('edit_paypal_mail_status');
+            $table->enum('edit_bank_details_status', ['active', 'deactive', 'requested'])->default('active')->after('edit_payoneer_mail_status');
+            $table->enum('edit_binance_mail_status', ['active', 'deactive', 'requested'])->default('active')->after('edit_bank_details_status');
+            $table->enum('edit_other_payment_method_description_status', ['active', 'deactive', 'requested'])->default('active')->after('edit_binance_mail_status');
             
             // Binance and Other Payment Methods
             $table->string('binance')->nullable()->after('edit_binance_mail_status');

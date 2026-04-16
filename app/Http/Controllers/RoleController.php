@@ -15,20 +15,44 @@ class RoleController extends Controller
      */
     public function index(Request $request)
     {
-        // Only super-admin can view roles
-        if (!$request->user()->hasRole('super-admin')) {
+        try {
+            // Only super-admin can view roles
+            if (!$request->user() || !$request->user()->hasRole('super-admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized - Only super-admin can access roles'
+                ], 403);
+            }
+
+            $roles = Role::with('permissions')->get();
+            
+            // Format the response to ensure permissions are properly structured
+            $formattedRoles = $roles->map(function($role) {
+                return [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'guard_name' => $role->guard_name,
+                    'permissions' => $role->permissions->map(function($permission) {
+                        return [
+                            'id' => $permission->id,
+                            'name' => $permission->name,
+                        ];
+                    }),
+                    'created_at' => $role->created_at,
+                    'updated_at' => $role->updated_at,
+                ];
+            });
+
+            return response()->json([
+                'success' => true,
+                'roles' => $formattedRoles
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized'
-            ], 403);
+                'message' => 'Failed to fetch roles: ' . $e->getMessage()
+            ], 500);
         }
-
-        $roles = Role::with('permissions')->get();
-        
-        return response()->json([
-            'success' => true,
-            'roles' => $roles
-        ]);
     }
 
     /**
@@ -36,56 +60,58 @@ class RoleController extends Controller
      */
     public function permissions(Request $request)
     {
-        // Only super-admin can view permissions
-        if (!$request->user()->hasRole('super-admin')) {
+        try {
+            // Only super-admin can view permissions
+            if (!$request->user() || !$request->user()->hasRole('super-admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized - Only super-admin can access permissions'
+                ], 403);
+            }
+
+            $permissions = Permission::all(['id', 'name', 'guard_name']);
+            
+            return response()->json([
+                'success' => true,
+                'permissions' => $permissions
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Unauthorized'
-            ], 403);
+                'message' => 'Failed to fetch permissions: ' . $e->getMessage()
+            ], 500);
         }
-
-        $permissions = Permission::all();
-        
-        return response()->json([
-            'success' => true,
-            'permissions' => $permissions
-        ]);
     }
 
     /**
      * Update role permissions
      */
-  public function updatePermissions(Request $request, $roleId)
+    public function updatePermissions(Request $request, $roleId)
     {
-        // Only super-admin can manage permissions
-        if (!$request->user()->hasRole('super-admin')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized to manage permissions'
-            ], 403);
-        }
-
         try {
-            // Try to find by ID without guard_name first
+            // Only super-admin can manage permissions
+            if (!$request->user() || !$request->user()->hasRole('super-admin')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized - Only super-admin can manage permissions'
+                ], 403);
+            }
+
+            // Find role by ID
             $role = Role::find($roleId);
             
             if (!$role) {
-                // If not found, try with the default guard
-                try {
-                    $role = Role::findById($roleId, 'web');
-                } catch (\Exception $e) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Role not found with ID: ' . $roleId
-                    ], 404);
-                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Role not found with ID: ' . $roleId
+                ], 404);
             }
 
             // Prevent modifying super-admin role
             if ($role->name === 'super-admin') {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Cannot modify super-admin role'
+                    'message' => 'Cannot modify super-admin role permissions'
                 ], 403);
             }
 
@@ -110,7 +136,16 @@ class RoleController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Role permissions updated successfully',
-                'role' => $role
+                'role' => [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'permissions' => $role->permissions->map(function($permission) {
+                        return [
+                            'id' => $permission->id,
+                            'name' => $permission->name,
+                        ];
+                    }),
+                ]
             ]);
 
         } catch (\Exception $e) {

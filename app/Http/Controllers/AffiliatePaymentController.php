@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\AffiliatePayment;
+use App\Models\AffiliateSale;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -370,6 +371,8 @@ class AffiliatePaymentController extends Controller
                 'pay_method' => $affiliate->pay_method,
                 'paypal' => $affiliate->paypal,
                 'payoneer' => $affiliate->payoneer,
+                    'bank_details' => $affiliate->bank_details,  // Add this
+        'binance' => $affiliate->binance,            // Add this
                 'account_email' => $affiliate->account_email,
             ];
         });
@@ -662,9 +665,69 @@ class AffiliatePaymentController extends Controller
             'error' => $e->getMessage()
         ], 500);
     }
+}public function getAffiliateSales(Request $request, $affiliateId)
+{
+    try {
+        $query = AffiliateSale::where('affiliate_id', $affiliateId);
+        
+        // Apply date filters if provided
+        if ($request->has('start_date')) {
+            $query->whereDate('purchased_at', '>=', $request->start_date);
+        }
+        
+        if ($request->has('end_date')) {
+            $query->whereDate('purchased_at', '<=', $request->end_date);
+        }
+        
+        $sales = $query->orderBy('purchased_at', 'desc')->get();
+        
+        // Debug: Log the raw sales data
+        \Log::info('Sales data for affiliate ' . $affiliateId, [
+            'total_count' => $sales->count(),
+            'sample' => $sales->first()
+        ]);
+        
+        // Calculate summary (only non-hidden sales)
+        // Fix: Ensure proper boolean comparison for is_hidden
+        $visibleSales = $sales->filter(function($sale) {
+            // Convert to boolean properly - handle 0, '0', false, null as not hidden
+            $isHidden = filter_var($sale->is_hidden, FILTER_VALIDATE_BOOLEAN);
+            return !$isHidden;
+        });
+        
+        // Calculate total commission from visible sales only
+        $totalCommission = $visibleSales->sum(function($sale) {
+            return (float) $sale->commission_amount;
+        });
+        
+        $summary = [
+            'total_commission' => $totalCommission,
+            'total_sales' => $visibleSales->count(),
+            'total_hidden' => $sales->filter(function($sale) {
+                return filter_var($sale->is_hidden, FILTER_VALIDATE_BOOLEAN);
+            })->count(),
+            'total_transactions' => $sales->count()
+        ];
+        
+        // Debug: Log the summary
+        \Log::info('Sales summary for affiliate ' . $affiliateId, $summary);
+        
+        return response()->json([
+            'success' => true,
+            'data' => $sales,
+            'summary' => $summary,
+            'message' => 'Affiliate sales retrieved successfully'
+        ]);
+        
+    } catch (\Exception $e) {
+        \Log::error('Error in getAffiliateSales: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to retrieve affiliate sales',
+            'error' => $e->getMessage()
+        ], 500);
+    }
 }
-
-
 public function getMyPayments(Request $request)
 {
     try {

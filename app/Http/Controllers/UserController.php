@@ -38,104 +38,121 @@ class UserController extends Controller
     /**
      * Create a new user (admin/super-admin only)
      */
-    public function store(Request $request)
-    {
-        // Check if user has permission to create users
-        if (!$request->user()->hasPermissionTo('create users')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized to create users'
-            ], 403);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'address' => 'nullable|string',
-            'pay_method' => 'nullable|string|in:paypal,payoneer,bank,binance,other',
-            'account_email' => 'nullable|email',
-            'skype' => 'nullable|string|max:255',
-            'skype_account' => 'nullable|string|max:255',
-            'phone_number' => 'nullable|string|max:255',
-            'telegram_account' => 'nullable|string|max:255',
-            'microsoft_team' => 'nullable|string|max:255',
-            'company' => 'nullable|string|max:255',
-            'website' => 'nullable|url',
-            'promotion_description' => 'nullable|string',
-            'payoneer' => 'nullable|string|max:255',
-            'paypal' => 'nullable|email',
-            'binance' => 'nullable|string|max:255',
-            'bank_details' => 'nullable|string',
-            'other_payment_method_description' => 'nullable|string',
-            'role' => 'required|string|in:admin,affiliate',
-            'status' => 'required|in:active,inactive,suspended',
-            'balance' => 'nullable|numeric|min:0',
-            'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
-            'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
-            'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
-            'sale_hide' => 'nullable|integer|max:10',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        // Only super-admin can create admin users
-        if ($request->role === 'admin' && !$request->user()->hasRole('super-admin')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Only super-admin can create admin users'
-            ], 403);
-        }
-
-        // Get settings for default commission values
-        $settings = Setting::getSettings();
-
-        $user = User::create([
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'address' => $request->address,
-            'phone_number' => $request->phone_number,
-            'telegram_account' => $request->telegram_account,
-            'microsoft_team' => $request->microsoft_team,
-            'pay_method' => $request->pay_method,
-            'account_email' => $request->account_email,
-            'skype' => $request->skype ?? $request->skype_account,
-            'company' => $request->company,
-            'website' => $request->website,
-            'promotion_description' => $request->promotion_description,
-            'payoneer' => $request->payoneer,
-            'paypal' => $request->paypal,
-            'binance' => $request->binance,
-            'bank_details' => $request->bank_details,
-            'other_payment_method_description' => $request->other_payment_method_description,
-            'balance' => $request->balance ?? 0,
-            'default_affiliate_commission_1' => $request->default_affiliate_commission_1 ?? ($settings->default_affiliate_commission_1 ?? 70),
-            'default_affiliate_commission_2' => $request->default_affiliate_commission_2 ?? ($settings->default_affiliate_commission_2 ?? 50),
-            'default_affiliate_commission_3' => $request->default_affiliate_commission_3 ?? ($settings->default_affiliate_commission_3 ?? 40),
-            'sale_hide' => $request->sale_hide ?? 3,
-            'status' => $request->status,
-            // Default statuses for payment methods
-            'edit_paypal_mail_status' => 'deactive',
-            'edit_payoneer_mail_status' => 'deactive',
-            'edit_bank_details_status' => 'deactive',
-            'edit_binance_mail_status' => 'deactive',
-            'edit_other_payment_method_description_status' => 'deactive',
-        ]);
-
-        // Assign role
-        $user->assignRole($request->role);
-
+   /**
+ * Create user (Admin only)
+ */
+public function store(Request $request)
+{
+    // Check if user has permission to create users
+    if (!$request->user()->hasPermissionTo('create users')) {
         return response()->json([
-            'success' => true,
-            'message' => 'User created successfully',
-            'user' => $user->load('roles', 'permissions')
-        ], 201);
+            'success' => false,
+            'message' => 'Unauthorized to create users'
+        ], 403);
     }
+
+    $validator = Validator::make($request->all(), [
+        'first_name' => 'required|string|max:255',
+        'last_name' => 'required|string|max:255',
+        'email' => 'required|string|email|max:255|unique:users',
+        'password' => 'required|string|min:8|confirmed',
+        'address' => 'nullable|string',
+        'pay_method' => 'nullable|string|in:paypal,payoneer,bank,binance,other',
+        'account_email' => 'nullable|email',
+        'skype' => 'nullable|string|max:255',
+        'phone_number' => 'nullable|string|max:255',
+        'telegram_account' => 'nullable|string|max:255',
+        'microsoft_team' => 'nullable|string|max:255',
+        'company' => 'nullable|string|max:255',
+        'website' => 'nullable|url',
+        'promotion_description' => 'nullable|string',
+        'payoneer' => 'nullable|string|max:255',
+        'paypal' => 'nullable|email',
+        'binance' => 'nullable|string|max:255',
+        'bank_details' => 'nullable|string',
+        'other_payment_method_description' => 'nullable|string',
+        'role' => 'required|string|in:admin,affiliate,super-admin',
+        'status' => 'required|in:active,inactive,suspended',
+        'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
+        'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
+        'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
+        'sale_hide' => 'nullable|integer|min:0|max:10',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
+
+    // Restrict role assignment based on user's role
+    $currentUser = $request->user();
+    $requestedRole = $request->role;
+    
+    // Only super-admin can create admin or super-admin users
+    if (($requestedRole === 'admin' || $requestedRole === 'super-admin') && !$currentUser->hasRole('super-admin')) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Only super-admin can create admin or super-admin users'
+        ], 403);
+    }
+    
+    // Admin users can only create affiliate users
+    if ($currentUser->hasRole('admin') && $requestedRole !== 'affiliate') {
+        return response()->json([
+            'success' => false,
+            'message' => 'Admin users can only create affiliate accounts'
+        ], 403);
+    }
+
+    // Get settings for default commission values
+    $settings = Setting::getSettings();
+
+    $user = User::create([
+        'first_name' => $request->first_name,
+        'last_name' => $request->last_name,
+        'email' => $request->email,
+        'password' => Hash::make($request->password),
+        'address' => $request->address,
+        'phone_number' => $request->phone_number,
+        'telegram_account' => $request->telegram_account,
+        'microsoft_team' => $request->microsoft_team,
+        'pay_method' => $request->pay_method,
+        'account_email' => $request->account_email,
+        'skype' => $request->skype,
+        'company' => $request->company,
+        'website' => $request->website,
+        'promotion_description' => $request->promotion_description,
+        'payoneer' => $request->payoneer,
+        'paypal' => $request->paypal,
+        'binance' => $request->binance,
+        'bank_details' => $request->bank_details,
+        'other_payment_method_description' => $request->other_payment_method_description,
+        'balance' => 0, // Always start with 0 balance
+        'default_affiliate_commission_1' => $request->default_affiliate_commission_1 ?? ($settings->default_affiliate_commission_1 ?? 70),
+        'default_affiliate_commission_2' => $request->default_affiliate_commission_2 ?? ($settings->default_affiliate_commission_2 ?? 50),
+        'default_affiliate_commission_3' => $request->default_affiliate_commission_3 ?? ($settings->default_affiliate_commission_3 ?? 40),
+        'sale_hide' => $request->sale_hide ?? 3,
+        'status' => $request->status,
+        // Default statuses for payment methods
+        'edit_paypal_mail_status' => 'active',
+        'edit_payoneer_mail_status' => 'active',
+        'edit_bank_details_status' => 'active',
+        'edit_binance_mail_status' => 'active',
+        'edit_other_payment_method_description_status' => 'active',
+        'total_earnings' => 0,
+        'total_sales' => 0,
+        'unique_clicks' => 0,
+        'total_clicks' => 0,
+    ]);
+
+    // Assign role
+    $user->assignRole($requestedRole);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'User created successfully',
+        'user' => $user->load('roles', 'permissions')
+    ], 201);
+}
 
     /**
      * Get single user details
@@ -165,168 +182,100 @@ class UserController extends Controller
         ]);
     }
 
-    /**
-     * Update user
-     */
-    public function update(Request $request, $id)
-    {
-        // Check if user has permission to edit users
-        if (!$request->user()->hasPermissionTo('edit users')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized to edit users'
-            ], 403);
-        }
-
-        $user = User::find($id);
-        
-        if (!$user) {
-            return response()->json([
-                'success' => false,
-                'message' => 'User not found'
-            ], 404);
-        }
-
-        // Check if trying to update super-admin
-        if ($user->hasRole('super-admin') && !$request->user()->hasRole('super-admin')) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Cannot modify super-admin user'
-            ], 403);
-        }
-
-        $validator = Validator::make($request->all(), [
-            'first_name' => 'sometimes|string|max:255',
-            'last_name' => 'sometimes|string|max:255',
-            'email' => 'sometimes|email|unique:users,email,' . $id,
-            'password' => 'sometimes|string|min:8|confirmed',
-            'address' => 'nullable|string',
-            'pay_method' => 'nullable|string|in:paypal,payoneer,bank,binance,other',
-            'account_email' => 'nullable|email',
-            'skype' => 'nullable|string|max:255',
-            'skype_account' => 'nullable|string|max:255',
-            'phone_number' => 'nullable|string|max:255',
-            'telegram_account' => 'nullable|string|max:255',
-            'microsoft_team' => 'nullable|string|max:255',
-            'company' => 'nullable|string|max:255',
-            'website' => 'nullable|url',
-            'promotion_description' => 'nullable|string',
-            'payoneer' => 'nullable|string|max:255',
-            'paypal' => 'nullable|email',
-            'binance' => 'nullable|string|max:255',
-            'bank_details' => 'nullable|string',
-            'other_payment_method_description' => 'nullable|string',
-            'role' => 'sometimes|string|exists:roles,name',
-            'status' => 'sometimes|in:active,inactive,suspended',
-            'balance' => 'nullable|numeric|min:0',
-            'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
-            'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
-            'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
-            'sale_hide' => 'nullable|integer|max:10',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        // Update user data
-        $updateData = $request->only([
-            'first_name',
-            'last_name',
-            'address',
-            'pay_method',
-            'account_email',
-            'skype',
-            'phone_number',
-            'telegram_account',
-            'microsoft_team',
-            'company',
-            'website',
-            'promotion_description',
-            'payoneer',
-            'paypal',
-            'binance',
-            'bank_details',
-            'other_payment_method_description',
-            'balance',
-            'default_affiliate_commission_1',
-            'default_affiliate_commission_2',
-            'default_affiliate_commission_3',
-            'sale_hide',
-        ]);
-
-        // Handle skype_account field (support both field names)
-        if ($request->has('skype_account') && !$request->has('skype')) {
-            $updateData['skype'] = $request->skype_account;
-        }
-
-        if ($request->has('email')) {
-            $updateData['email'] = $request->email;
-        }
-
-        if ($request->has('password') && !empty($request->password)) {
-            $updateData['password'] = Hash::make($request->password);
-        }
-
-        if ($request->has('status')) {
-            // Only super-admin can change status
-            if (!$request->user()->hasRole('super-admin')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only super-admin can change user status'
-                ], 403);
-            }
-            $updateData['status'] = $request->status;
-        }
-
-        $user->update($updateData);
-
-        // Update role if provided
-        if ($request->has('role')) {
-            // Only super-admin can change roles
-            if (!$request->user()->hasRole('super-admin')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Only super-admin can change user roles'
-                ], 403);
-            }
-            
-            // Prevent changing super-admin role
-            if ($user->hasRole('super-admin') && $request->role !== 'super-admin') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Cannot change super-admin role'
-                ], 403);
-            }
-            
-            $user->syncRoles([$request->role]);
-        }
-      // Check if sale_hide is being changed
-        $oldSaleHide = $user->sale_hide;
-        $newSaleHide = $request->has('sale_hide') ? $request->sale_hide : $oldSaleHide;
-        
-        if ($request->has('sale_hide') && $oldSaleHide != $newSaleHide) {
-            // Get current total visible sales count
-            $totalVisibleSales = AffiliateSale::where('affiliate_id', $id)
-                ->count();
-            
-            // Update sale_hide and record current visible sales count as cycle start
-            $updateData['sale_hide'] = $newSaleHide;
-            $updateData['sale_hide_cycle'] = $totalVisibleSales;
-            
-        } elseif ($request->has('sale_hide')) {
-            // sale_hide is being set but same value, just update
-            $updateData['sale_hide'] = $newSaleHide;
-        }
-
-
+ /**
+ * Update user (Admin only)
+ */
+public function update(Request $request, $id)
+{
+    if (!$request->user()->can('edit users')) {
         return response()->json([
-            'success' => true,
-            'message' => 'User updated successfully',
-            'user' => $user->fresh()->load('roles', 'permissions')
-        ]);
+            'success' => false,
+            'message' => 'Unauthorized'
+        ], 403);
     }
 
+    $user = User::find($id);
+
+    if (!$user) {
+        return response()->json([
+            'success' => false,
+            'message' => 'User not found'
+        ], 404);
+    }
+
+    $validator = Validator::make($request->all(), [
+        'first_name' => 'sometimes|string|max:255',
+        'last_name' => 'sometimes|string|max:255',
+        'email' => ['sometimes', 'email', Rule::unique('users')->ignore($user->id)],
+        'role' => 'sometimes|string|in:admin,affiliate',
+        'status' => 'sometimes|in:active,inactive,suspended',
+        'address' => 'nullable|string',
+        'pay_method' => 'nullable|string|in:paypal,payoneer,bank,binance,other',
+        'account_email' => 'nullable|email',
+        'phone_number' => 'nullable|string|max:255',
+        'telegram_account' => 'nullable|string|max:255',
+        'microsoft_team' => 'nullable|string|max:255',
+        'company' => 'nullable|string|max:255',
+        'website' => 'nullable|url',
+        'promotion_description' => 'nullable|string',
+        'payoneer' => 'nullable|string|max:255',
+        'paypal' => 'nullable|email',
+        'binance' => 'nullable|string|max:255',
+        'bank_details' => 'nullable|string',
+        'other_payment_method_description' => 'nullable|string',
+        'default_affiliate_commission_1' => 'nullable|numeric|min:0|max:100',
+        'default_affiliate_commission_2' => 'nullable|numeric|min:0|max:100',
+        'default_affiliate_commission_3' => 'nullable|numeric|min:0|max:100',
+        'sale_hide' => 'nullable|integer|min:0|max:10',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
+
+    // Restrict role assignment based on user's role
+    $currentUser = $request->user();
+    
+    if ($request->has('role')) {
+        $requestedRole = $request->role;
+        
+        // Only super-admin can change role to admin
+        if ($requestedRole === 'admin' && !$currentUser->hasRole('super-admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only super-admin can assign admin role'
+            ], 403);
+        }
+        
+        // Admin users can only assign affiliate role
+        if ($currentUser->hasRole('admin') && $requestedRole !== 'affiliate') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Admin users can only assign affiliate role'
+            ], 403);
+        }
+        
+        // Update role
+        $user->syncRoles([$requestedRole]);
+    }
+
+    // Remove balance from update data - prevent balance modification
+    $updateData = $request->except('role', 'password', 'balance');
+    
+    // Update user data
+    $user->update($updateData);
+
+    // Update password if provided
+    if ($request->has('password') && !empty($request->password)) {
+        $user->update(['password' => Hash::make($request->password)]);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'User updated successfully',
+        'user' => $user->fresh()->load('roles', 'permissions')
+    ]);
+}
     /**
      * Toggle user status (activate/deactivate)
      */

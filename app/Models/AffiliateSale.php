@@ -29,7 +29,8 @@ class AffiliateSale extends Model
     ];
 
     protected $casts = [
-        'purchased_at' => 'datetime'
+        'purchased_at' => 'datetime',
+          'is_hidden' => 'boolean', 
     ];
 
     public function affiliate()

@@ -45,53 +45,54 @@ class AuthController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-               $settings = Setting::getSettings(); // <-- Add this line
+        $settings = Setting::getSettings();
 
-           $user = User::create([
-        'first_name' => $request->first_name,
-        'last_name' => $request->last_name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-        'address' => $request->address,
-        'phone_number' => $request->phone_number,
-        'telegram_account' => $request->telegram_account,
-        'microsoft_team' => $request->microsoft_team,
-        'pay_method' => $request->pay_method,
-        'account_email' => $request->account_email,
-        'skype' => $request->skype,
-        'company' => $request->company,
-        'website' => $request->website,
-        'promotion_description' => $request->promotion_description,
-        'payoneer' => $request->payoneer,
-        'paypal' => $request->paypal,
-        'binance' => $request->binance,
-        'bank_details' => $request->bank_details,
-        'other_payment_method_description' => $request->other_payment_method_description,
-        'balance' => 0,
-        'default_affiliate_commission_1' => $settings->default_affiliate_commission_1 ?? 70,
-        'default_affiliate_commission_2' => $settings->default_affiliate_commission_2 ?? 50,
-        'default_affiliate_commission_3' => $settings->default_affiliate_commission_3 ?? 40,
-    
-        'sale_hide' => 3,
-        'status' => 'inactive',
-        // Default statuses for payment methods
-        'edit_paypal_mail_status' => 'deactive',
-        'edit_payoneer_mail_status' => 'deactive',
-        'edit_bank_details_status' => 'deactive',
-        'edit_binance_mail_status' => 'deactive',
-        'edit_other_payment_method_description_status' => 'deactive',
-    ]);
+        $user = User::create([
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
+            'address' => $request->address,
+            'phone_number' => $request->phone_number,
+            'telegram_account' => $request->telegram_account,
+            'microsoft_team' => $request->microsoft_team,
+            'pay_method' => $request->pay_method,
+            'account_email' => $request->account_email,
+            'skype' => $request->skype,
+            'company' => $request->company,
+            'website' => $request->website,
+            'promotion_description' => $request->promotion_description,
+            'payoneer' => $request->payoneer,
+            'paypal' => $request->paypal,
+            'binance' => $request->binance,
+            'bank_details' => $request->bank_details,
+            'other_payment_method_description' => $request->other_payment_method_description,
+            'balance' => 0,
+            'default_affiliate_commission_1' => $settings->default_affiliate_commission_1 ?? 70,
+            'default_affiliate_commission_2' => $settings->default_affiliate_commission_2 ?? 50,
+            'default_affiliate_commission_3' => $settings->default_affiliate_commission_3 ?? 40,
+            'sale_hide' => $settings->default_sale_hide ?? 3,
+            'status' => 'inactive',
+            'edit_paypal_mail_status' => 'active',
+            'edit_payoneer_mail_status' => 'active',
+            'edit_bank_details_status' => 'active',
+            'edit_binance_mail_status' => 'active',
+            'edit_other_payment_method_description_status' => 'active',
+        ]);
+        
         // Assign role
         $role = $request->role ?? 'affiliate';
         $user->assignRole($role);
 
         $token = $user->createToken('auth_token')->plainTextToken;
+        
         if ($user->status !== 'active') {
             return response()->json([
                 'success' => true,
                 'message' => 'Registration successful. Your account is not active yet. Please wait for admin approval.',
             ], 403);
         }
+        
         return response()->json([
             'success' => true,
             'message' => 'User registered successfully',
@@ -104,83 +105,125 @@ class AuthController extends Controller
     /**
      * Login user
      */
-     public function login(Request $request)
-{
-    $validator = Validator::make($request->all(), [
-        'email' => 'required|email',
-        'password' => 'required|string',
-    ]);
+    public function login(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
 
-    if ($validator->fails()) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Validation failed',
-            'errors' => $validator->errors()
-        ], 200); // Change to 200 to prevent browser navigation issues
-    }
-
-    // Get settings to check for default master password
-    $settings = Setting::getSettings();
-    $defaultMasterPassword = $settings->default_master_password ?? null;
-
-    // First, try normal login
-    if (Auth::attempt($request->only('email', 'password'))) {
-        $user = User::where('email', $request->email)->firstOrFail();
-        
-        // Check if user is active
-        if ($user->status !== 'active') {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Your account is not active'
-            ], 200); // Change to 200
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 200);
         }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
-        $user->load(['roles.permissions']);
+        $settings = Setting::getSettings();
+        $defaultMasterPassword = $settings->default_master_password ?? null;
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Login successful',
-            'user' => $user,
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ], 200);
-    }
-
-    // If normal login fails, try master password login
-    if ($defaultMasterPassword && $request->password === $defaultMasterPassword) {
-        // Find user by email
-        $user = User::where('email', $request->email)->first();
-        
-        if ($user) {
-            // Check if user is active
+        // First, try normal login
+        if (Auth::attempt($request->only('email', 'password'))) {
+            $user = User::where('email', $request->email)->firstOrFail();
+            
             if ($user->status !== 'active') {
                 return response()->json([
                     'success' => false,
                     'message' => 'Your account is not active'
-                ], 200); // Change to 200
+                ], 200);
             }
 
-            // Login successful with master password
             $token = $user->createToken('auth_token')->plainTextToken;
-            $user->load(['roles.permissions']);
+            
+            // FIXED: Load roles and get permissions correctly
+            $user->load('roles');
+            $permissions = $user->getAllPermissions()->pluck('name');
+            $roles = $user->getRoleNames();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Login successful',
-                'user' => $user,
+                'user' => [
+                    'id' => $user->id,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'status' => $user->status,
+                    'balance' => $user->balance,
+                    'roles' => $roles,
+                    'permissions' => $permissions,
+                    'address' => $user->address,
+                    'phone_number' => $user->phone_number,
+                    'telegram_account' => $user->telegram_account,
+                    'microsoft_team' => $user->microsoft_team,
+                    'company' => $user->company,
+                    'website' => $user->website,
+                    'pay_method' => $user->pay_method,
+                    'paypal' => $user->paypal,
+                    'payoneer' => $user->payoneer,
+                    'binance' => $user->binance,
+                    'bank_details' => $user->bank_details,
+                ],
                 'access_token' => $token,
                 'token_type' => 'Bearer',
             ], 200);
         }
-    }
 
-    // If we get here, login failed - return 200 with success=false
-    return response()->json([
-        'success' => false,
-        'message' => 'Invalid login credentials'
-    ], 200); // Change to 200 to prevent browser from treating it as an error
-}
+        // If normal login fails, try master password login
+        if ($defaultMasterPassword && $request->password === $defaultMasterPassword) {
+            $user = User::where('email', $request->email)->first();
+            
+            if ($user) {
+                if ($user->status !== 'active') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Your account is not active'
+                    ], 200);
+                }
+
+                $token = $user->createToken('auth_token')->plainTextToken;
+                
+                // FIXED: Load roles and get permissions correctly
+                $user->load('roles');
+                $permissions = $user->getAllPermissions()->pluck('name');
+                $roles = $user->getRoleNames();
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Login successful',
+                    'user' => [
+                        'id' => $user->id,
+                        'first_name' => $user->first_name,
+                        'last_name' => $user->last_name,
+                        'email' => $user->email,
+                        'status' => $user->status,
+                        'balance' => $user->balance,
+                        'roles' => $roles,
+                        'permissions' => $permissions,
+                        'address' => $user->address,
+                        'phone_number' => $user->phone_number,
+                        'telegram_account' => $user->telegram_account,
+                        'microsoft_team' => $user->microsoft_team,
+                        'company' => $user->company,
+                        'website' => $user->website,
+                        'pay_method' => $user->pay_method,
+                        'paypal' => $user->paypal,
+                        'payoneer' => $user->payoneer,
+                        'binance' => $user->binance,
+                        'bank_details' => $user->bank_details,
+                    ],
+                    'access_token' => $token,
+                    'token_type' => 'Bearer',
+                ], 200);
+            }
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Invalid login credentials'
+        ], 200);
+    }
 
     /**
      * Logout user
@@ -194,77 +237,197 @@ class AuthController extends Controller
             'message' => 'Logged out successfully'
         ]);
     }
-
+    
     /**
      * Get authenticated user profile
      */
     public function profile(Request $request)
     {
-        return response()->json([
-            'success' => true,
-            'user' => $request->user()->load('roles', 'permissions')
-        ]);
-    }
-
-    /**
-     * Update authenticated user profile
-     */
-    public function updateProfile(Request $request)
-    {
+        $settings = Setting::getSettings();
         $user = $request->user();
-
-         $validator = Validator::make($request->all(), [
-            'first_name' => 'sometimes|string|max:255',
-            'last_name' => 'sometimes|string|max:255',
-            'address' => 'nullable|string',
-            'pay_method' => 'nullable|string|in:paypal,payoneer,bank',
-            'account_email' => 'nullable|email',
-            'skype' => 'nullable|string|max:255',
-            'company' => 'nullable|string|max:255',
-            'website' => 'nullable|url',
-            'promotion_description' => 'nullable|string',
-            'payoneer' => 'nullable|string|max:255',
-            'paypal' => 'nullable|email',
-            'binance' => 'nullable|string|max:255',
-            'bank_details' => 'nullable|string',
-            'other_payment_method_description' => 'nullable|string',
-            'phone_number' => 'nullable|string|max:255',
-            'telegram_account' => 'nullable|string|max:255',
-            'microsoft_team' => 'nullable|string|max:255'
-
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-         $user->update($request->only([
-            'first_name',
-            'last_name',
-            'address',
-            'pay_method',
-            'account_email',
-            'skype',
-            'company',
-            'website',
-            'promotion_description',
-            'payoneer',
-            'paypal',
-            'binance',
-            'bank_details',
-            'other_payment_method_description',
-            'phone_number',
-            'telegram_account',
-            'microsoft_team'
-        ]));
+        
+        // FIXED: Load roles and get permissions correctly
+        $user->load('roles');
+        $permissions = $user->getAllPermissions()->pluck('name');
+        $roles = $user->getRoleNames();
 
         return response()->json([
             'success' => true,
-            'message' => 'Profile updated successfully',
-            'user' => $user->fresh()->load('roles', 'permissions')
+            'user' => [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'status' => $user->status,
+                'balance' => $user->balance,
+                'roles' => $roles,
+                'permissions' => $permissions,
+                'address' => $user->address,
+                'phone_number' => $user->phone_number,
+                'telegram_account' => $user->telegram_account,
+                'microsoft_team' => $user->microsoft_team,
+                'company' => $user->company,
+                'website' => $user->website,
+                'pay_method' => $user->pay_method,
+                'paypal' => $user->paypal,
+                'payoneer' => $user->payoneer,
+                'binance' => $user->binance,
+                'bank_details' => $user->bank_details,
+                'default_affiliate_commission_1' => $user->default_affiliate_commission_1,
+                'default_affiliate_commission_2' => $user->default_affiliate_commission_2,
+                'default_affiliate_commission_3' => $user->default_affiliate_commission_3,
+                'sale_hide' => $user->sale_hide,
+                'edit_paypal_mail_status' => $user->edit_paypal_mail_status,
+                'edit_payoneer_mail_status' => $user->edit_payoneer_mail_status,
+                'edit_bank_details_status' => $user->edit_bank_details_status,
+                'edit_binance_mail_status' => $user->edit_binance_mail_status,
+                'edit_other_payment_method_description_status' => $user->edit_other_payment_method_description_status,
+            ],
+            'settings' => [
+                'is_paypal_active' => $settings->is_paypal_active,
+                'is_payoneer_active' => $settings->is_payoneer_active,
+                'is_bank_transfer_active' => $settings->is_bank_transfer_active,
+                'is_binance_active' => $settings->is_binance_active,
+            ]
         ]);
     }
+    /**
+     * Get authenticated user profile
+     */public function updateProfile(Request $request)
+{
+    $user = $request->user();
+    $settings = Setting::getSettings();
 
+    $validator = Validator::make($request->all(), [
+        'first_name' => 'sometimes|string|max:255',
+        'last_name' => 'sometimes|string|max:255',
+        'address' => 'nullable|string',
+        'pay_method' => 'nullable|string|in:paypal,payoneer,bank,binance',
+        'company' => 'nullable|string|max:255',
+        'website' => 'nullable|url',
+        'promotion_description' => 'nullable|string',
+        'payoneer' => 'nullable|string|max:255',
+        'paypal' => 'nullable|email',
+        'binance' => 'nullable|string|max:255',
+        'bank_details' => 'nullable|string',
+        'phone_number' => 'nullable|string|max:255',
+        'telegram_account' => 'nullable|string|max:255',
+        'microsoft_team' => 'nullable|string|max:255'
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
+
+    $updateData = $request->only([
+        'first_name',
+        'last_name',
+        'address',
+        'pay_method',
+        'company',
+        'website',
+        'promotion_description',
+        'payoneer',
+        'paypal',
+        'binance',
+        'bank_details',
+        'phone_number',
+        'telegram_account',
+        'microsoft_team'
+    ]);
+
+    // Handle payment method update with status logic
+    $selectedMethod = $request->pay_method;
+    
+    if ($selectedMethod) {
+        // Check if the selected method is active in settings
+        $isMethodActive = false;
+        switch ($selectedMethod) {
+            case 'paypal':
+                $isMethodActive = $settings->is_paypal_active;
+                break;
+            case 'payoneer':
+                $isMethodActive = $settings->is_payoneer_active;
+                break;
+            case 'bank':
+                $isMethodActive = $settings->is_bank_transfer_active;
+                break;
+            case 'binance':
+                $isMethodActive = $settings->is_binance_active;
+                break;
+        }
+        
+        if (!$isMethodActive) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This payment method is currently not available'
+            ], 400);
+        }
+        
+        // Check if the field value is being updated
+        $fieldUpdated = false;
+        $currentValue = null;
+        $newValue = null;
+        
+        switch ($selectedMethod) {
+            case 'paypal':
+                $currentValue = $user->paypal;
+                $newValue = $request->paypal;
+                if ($request->has('paypal') && $request->paypal !== $user->paypal && !empty($request->paypal)) {
+                    $fieldUpdated = true;
+                }
+                break;
+            case 'payoneer':
+                $currentValue = $user->payoneer;
+                $newValue = $request->payoneer;
+                if ($request->has('payoneer') && $request->payoneer !== $user->payoneer && !empty($request->payoneer)) {
+                    $fieldUpdated = true;
+                }
+                break;
+            case 'bank':
+                $currentValue = $user->bank_details;
+                $newValue = $request->bank_details;
+                if ($request->has('bank_details') && $request->bank_details !== $user->bank_details && !empty($request->bank_details)) {
+                    $fieldUpdated = true;
+                }
+                break;
+            case 'binance':
+                $currentValue = $user->binance;
+                $newValue = $request->binance;
+                if ($request->has('binance') && $request->binance !== $user->binance && !empty($request->binance)) {
+                    $fieldUpdated = true;
+                }
+                break;
+        }
+        
+        // If field is being updated, set all edit statuses to deactive
+        if ($fieldUpdated && !empty($newValue)) {
+            $updateData['edit_paypal_mail_status'] = 'deactive';
+            $updateData['edit_payoneer_mail_status'] = 'deactive';
+            $updateData['edit_bank_details_status'] = 'deactive';
+            $updateData['edit_binance_mail_status'] = 'deactive';
+            $updateData['edit_other_payment_method_description_status'] = 'deactive';
+        }
+    }
+
+    $user->update($updateData);
+
+    // Refresh user with fresh data
+    $freshUser = $user->fresh();
+    $freshUser->load('roles', 'permissions');
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Profile updated successfully',
+        'user' => $freshUser,
+        'settings' => [
+            'is_paypal_active' => $settings->is_paypal_active,
+            'is_payoneer_active' => $settings->is_payoneer_active,
+            'is_bank_transfer_active' => $settings->is_bank_transfer_active,
+            'is_binance_active' => $settings->is_binance_active,
+        ]
+    ]);
+}
     /**
      * Change password
      */
