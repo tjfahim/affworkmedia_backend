@@ -356,13 +356,7 @@ class AuthController extends Controller
                 $isMethodActive = $settings->is_binance_active;
                 break;
         }
-        
-        if (!$isMethodActive) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This payment method is currently not available'
-            ], 400);
-        }
+     
         
         // Check if the field value is being updated
         $fieldUpdated = false;
