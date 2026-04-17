@@ -605,48 +605,85 @@ class AffiliateReportController extends Controller
             ];
         }
 
-        // ── 3. Top affiliates ─────────────────────────────────────────────────────
-        $topAffiliateClicks = (clone $clickBase)
-            ->select('affiliate_id', DB::raw('COUNT(*) as total_clicks'), DB::raw('SUM(is_unique) as unique_clicks'))
-            ->groupBy('affiliate_id')
-            ->get()->keyBy('affiliate_id');
+      // ── 3. Top affiliates (WITH HIDDEN SALES FOR SUPER ADMIN) ─────────────────────────
+$topAffiliateClicks = (clone $clickBase)
+    ->select('affiliate_id', DB::raw('COUNT(*) as total_clicks'), DB::raw('SUM(is_unique) as unique_clicks'))
+    ->groupBy('affiliate_id')
+    ->get()->keyBy('affiliate_id');
 
-        $topAffiliateVisibleSales = (clone $visibleSaleBase)
-            ->select('affiliate_id',
-                DB::raw('COUNT(*) as visible_sales'),
-                DB::raw('SUM(commission_amount) as affiliate_commission'),
-                DB::raw('SUM(package_price) as visible_revenue'))
-            ->groupBy('affiliate_id')
-            ->orderByDesc('affiliate_commission')
-            ->limit(10)
-            ->get()->keyBy('affiliate_id');
+$topAffiliateVisibleSales = (clone $visibleSaleBase)
+    ->select('affiliate_id',
+        DB::raw('COUNT(*) as visible_sales'),
+        DB::raw('SUM(commission_amount) as affiliate_commission'),
+        DB::raw('SUM(package_price) as visible_revenue'))
+    ->groupBy('affiliate_id')
+    ->orderByDesc('affiliate_commission')
+    ->limit(20)  // Get more to have 10 after filtering
+    ->get()->keyBy('affiliate_id');
 
-        $topAffiliateIds = $topAffiliateVisibleSales->keys()->merge($topAffiliateClicks->keys())->unique()->take(10);
-        $affUsers = User::whereIn('id', $topAffiliateIds)->get()->keyBy('id');
+// Get hidden sales for these affiliates
+$topAffiliateHiddenSales = collect(); // Initialize empty collection
+if ($topAffiliateVisibleSales->isNotEmpty()) {
+    $topAffiliateHiddenSales = (clone $hiddenSaleBase)
+        ->whereIn('affiliate_id', $topAffiliateVisibleSales->keys())
+        ->select('affiliate_id',
+            DB::raw('COUNT(*) as hidden_sales'),
+            DB::raw('SUM(package_price) as hidden_revenue'))
+        ->groupBy('affiliate_id')
+        ->get()->keyBy('affiliate_id');
+}
 
-        $topAffiliates = $topAffiliateIds->map(function ($uid) use ($affUsers, $topAffiliateClicks, $topAffiliateVisibleSales) {
-            $u = $affUsers->get($uid);
-            $ac = $topAffiliateClicks->get($uid);
-            $avs = $topAffiliateVisibleSales->get($uid);
-            $cl = (int)($ac->total_clicks ?? 0);
-            $cv = (int)($avs->visible_sales ?? 0);
-            $visibleRevenue = (float)($avs->visible_revenue ?? 0);
-            $affiliateCommission = (float)($avs->affiliate_commission ?? 0);
-            
-            return [
-                'affiliate_id' => $uid,
-                'name' => $u ? $u->full_name : 'Unknown',
-                'email' => $u ? $u->email : '',
-                'balance' => $u ? (float)$u->balance : 0,
-                'total_earnings' => $u ? (float)$u->total_earnings : 0,
-                'total_clicks' => $cl,
-                'unique_clicks' => (int)($ac->unique_clicks ?? 0),
-                'visible_sales' => $cv,
-                'visible_revenue' => $visibleRevenue,
-                'affiliate_commission' => $affiliateCommission,
-                'cr' => $cl > 0 ? round(($cv / $cl) * 100, 2) : 0,
-            ];
-        })->sortByDesc('affiliate_commission')->values()->toArray();
+// Merge all affiliate IDs
+$topAffiliateIds = $topAffiliateVisibleSales->keys()
+    ->merge($topAffiliateClicks->keys())
+    ->merge($topAffiliateHiddenSales->keys())
+    ->unique()
+    ->take(10);
+    
+$affUsers = User::whereIn('id', $topAffiliateIds)->get()->keyBy('id');
+
+$topAffiliates = $topAffiliateIds->map(function ($uid) use (
+    $affUsers, 
+    $topAffiliateClicks, 
+    $topAffiliateVisibleSales,
+    $topAffiliateHiddenSales
+) {
+    $u = $affUsers->get($uid);
+    $ac = $topAffiliateClicks->get($uid);
+    $avs = $topAffiliateVisibleSales->get($uid);
+    $ahs = $topAffiliateHiddenSales->get($uid);
+    
+    $cl = (int)($ac->total_clicks ?? 0);
+    $cv = (int)($avs->visible_sales ?? 0);
+    $visibleRevenue = (float)($avs->visible_revenue ?? 0);
+    $affiliateCommission = (float)($avs->affiliate_commission ?? 0);
+    
+    // Hidden sales data
+    $hiddenSales = (int)($ahs->hidden_sales ?? 0);
+    $hiddenRevenue = (float)($ahs->hidden_revenue ?? 0);
+    
+    // Calculate profits
+    $adminProfitVisibleOnly = $visibleRevenue - $affiliateCommission;
+    $adminProfitTotal = $adminProfitVisibleOnly + $hiddenRevenue;
+    
+    return [
+        'affiliate_id' => $uid,
+        'name' => $u ? ($u->full_name ?: $u->first_name . ' ' . $u->last_name) : 'Unknown',
+        'email' => $u ? $u->email : '',
+        'balance' => $u ? (float)$u->balance : 0,
+        'total_earnings' => $u ? (float)$u->total_earnings : 0,
+        'total_clicks' => $cl,
+        'unique_clicks' => (int)($ac->unique_clicks ?? 0),
+        'visible_sales' => $cv,
+        'visible_revenue' => $visibleRevenue,
+        'affiliate_commission' => $affiliateCommission,
+        'hidden_sales' => $hiddenSales,
+        'hidden_revenue' => $hiddenRevenue,
+        'admin_profit_visible_only' => $adminProfitVisibleOnly,
+        'admin_profit_total' => $adminProfitTotal,
+        'cr' => $cl > 0 ? round(($cv / $cl) * 100, 2) : 0,
+    ];
+})->sortByDesc('affiliate_commission')->values()->toArray();
 
         // ── 4. Top countries ──────────────────────────────────────────────────────
         $countryClicks = (clone $clickBase)
